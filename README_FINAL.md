@@ -1,6 +1,6 @@
-# AlgoBonito SV - Admin Panel con Supabase
+# Calida Escencia - Admin Panel con Supabase
 
-Panel de administración completo para la joyería AlgoBonito SV, integrado con Supabase para gestión de datos persistente.
+Panel de administración completo para Calida Escencia, integrado con Supabase para gestión de datos persistente.
 
 ## 🚀 Estado del Proyecto
 

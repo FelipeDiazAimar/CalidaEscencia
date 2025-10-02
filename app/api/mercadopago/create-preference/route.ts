@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         integration_type: 'web',
         created_at: new Date().toISOString(),
       },
-      statement_descriptor: 'AlgoBonitoSV - Ecommerce',
+      statement_descriptor: 'CalidaEscencia - Ecommerce',
       external_reference: external_reference ?? `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       shipments,
       payment_methods: {

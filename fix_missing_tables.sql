@@ -123,7 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_monetary_movements_category ON monetary_movements
 
 -- Insertar usuario administrador si no existe
 INSERT INTO users (id, email, role, full_name) VALUES 
-('00000000-0000-0000-0000-000000000001', 'admin@algobonito.com', 'admin', 'Administrador')
+('00000000-0000-0000-0000-000000000001', 'admin@calidaescencia.com', 'admin', 'Administrador')
 ON CONFLICT (email) DO NOTHING;
 
 -- Agregar algunos datos de prueba para costos fijos

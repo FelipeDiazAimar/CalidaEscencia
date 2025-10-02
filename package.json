@@ -1,6 +1,7 @@
 {
-  "name": "nextn",
+  "name": "calida-escencia",
   "version": "0.1.0",
+  "description": "Ecommerce platform for Calida Escencia",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 9002",

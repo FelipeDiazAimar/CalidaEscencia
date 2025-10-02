@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       // auto_return: 'approved' as const, // Commented out
       // notification_url: resolvedNotificationUrl, // Commented out
       metadata: metadata || {},
-      // statement_descriptor: 'AlgoBonitoSV', // Commented out
+      // statement_descriptor: 'CalidaEscencia', // Commented out
       // external_reference: `order_${Date.now()}`, // Commented out
     };
 

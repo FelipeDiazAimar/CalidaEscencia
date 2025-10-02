@@ -1,5 +1,5 @@
 -- =====================================================
--- AlgoBonitoSV Database Schema
+-- CalidaEscencia Database Schema
 -- =====================================================
 
 -- Enable UUID extension

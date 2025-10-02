@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: ProductDetailProps): Promise<
   
   if (!response.data) {
     return {
-      title: 'Producto no encontrado - AlgoBonito SV',
+      title: 'Producto no encontrado - Calida Escencia',
       description: 'El producto que buscas no fue encontrado.'
     };
   }
@@ -25,11 +25,11 @@ export async function generateMetadata({ params }: ProductDetailProps): Promise<
   const product = response.data;
   
   return {
-    title: `${product.name} - $${product.price} | AlgoBonito SV`,
-    description: product.description || `Compra ${product.name} en AlgoBonito SV. Joyería de calidad con diseños únicos.`,
+    title: `${product.name} - $${product.price} | Calida Escencia`,
+    description: product.description || `Compra ${product.name} en Calida Escencia. Productos de calidad con diseños únicos.`,
     openGraph: {
-      title: `${product.name} - AlgoBonito SV`,
-      description: product.description || `Descubre ${product.name} en AlgoBonito SV`,
+      title: `${product.name} - Calida Escencia`,
+      description: product.description || `Descubre ${product.name} en Calida Escencia`,
       images: product.cover_image ? [{ url: product.cover_image }] : [],
     },
   };

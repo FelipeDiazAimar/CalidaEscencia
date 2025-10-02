@@ -91,7 +91,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
       
       // Agregar información bancaria si es transferencia
       if (checkoutData.payment_method !== 'efectivo') {
-        message += `${EMOJI.bank} *Alias:* AlgoBonitoSV\n`;
+        message += `${EMOJI.bank} *Alias:* CalidaEscencia\n`;
         message += `${EMOJI.creditCard} *CBU:* 0000000000000000000000\n\n`;
       }
       

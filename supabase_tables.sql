@@ -582,7 +582,7 @@ CREATE POLICY "Admins can view all users" ON users
 
 -- Usuario administrador inicial
 INSERT INTO users (id, email, role, full_name) VALUES 
-('00000000-0000-0000-0000-000000000001', 'admin@algobonito.com', 'admin', 'Administrador');
+('00000000-0000-0000-0000-000000000001', 'admin@calidaescencia.com', 'admin', 'Administrador');
 
 -- Categorías iniciales
 INSERT INTO categories (name, description) VALUES 

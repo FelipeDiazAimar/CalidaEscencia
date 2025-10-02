@@ -1,4 +1,4 @@
-# AlgoBonitoSV - Supabase Integration Guide
+# CalidaEscencia - Supabase Integration Guide
 
 ## 🚀 Setup Instructions
 
