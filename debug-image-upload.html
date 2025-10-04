@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Image Upload</title>
+</head>
+<body>
+    <h1>Debug: Carga de Imágenes Temporales</h1>
+    
+    <div>
+        <input type="file" id="imageInput" accept="image/*">
+        <button onclick="testImageUpload()">Probar Carga</button>
+    </div>
+    
+    <div id="result"></div>
+    <div id="preview"></div>
+
+    <script>
+        function testImageUpload() {
+            const fileInput = document.getElementById('imageInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Selecciona una imagen primero');
+                return;
+            }
+
+            console.log('📁 Testing file:', file.name, file.type, file.size);
+            
+            // Test 1: Validación de archivo
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            if (!allowedTypes.includes(file.type)) {
+                console.error('❌ Tipo de archivo no válido');
+                document.getElementById('result').innerHTML = '<p style="color:red;">Tipo de archivo no válido</p>';
+                return;
+            }
+            
+            if (file.size > maxSize) {
+                console.error('❌ Archivo demasiado grande');
+                document.getElementById('result').innerHTML = '<p style="color:red;">Archivo demasiado grande</p>';
+                return;
+            }
+            
+            console.log('✅ Validación pasada');
+
+            // Test 2: Crear preview con FileReader
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                console.log('✅ DataURL created:', dataUrl.substring(0, 50) + '...');
+                
+                // Test 3: Crear blob URL
+                const blobUrl = URL.createObjectURL(file);
+                console.log('✅ Blob URL created:', blobUrl);
+                
+                // Mostrar previews
+                document.getElementById('preview').innerHTML = `
+                    <h3>DataURL Preview:</h3>
+                    <img src="${dataUrl}" style="width:200px;height:auto;border:1px solid #ccc;">
+                    <h3>Blob URL Preview:</h3>
+                    <img src="${blobUrl}" style="width:200px;height:auto;border:1px solid #ccc;">
+                `;
+                
+                document.getElementById('result').innerHTML = '<p style="color:green;">✅ Todo funciona correctamente</p>';
+                
+                // Test 4: Simular almacén temporal
+                const tempId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                console.log('✅ Temp ID generated:', tempId);
+                
+                console.log('🎉 Test completado exitosamente');
+            };
+            
+            reader.onerror = function() {
+                console.error('❌ Error creando preview');
+                document.getElementById('result').innerHTML = '<p style="color:red;">Error creando preview</p>';
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
