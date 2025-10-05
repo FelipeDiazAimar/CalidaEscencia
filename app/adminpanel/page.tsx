@@ -141,22 +141,6 @@ const dashboardCards = [
     iconColor: 'text-sky-600'
   },
   {
-    title: 'Materiales',
-    href: '/adminpanel/materials',
-    icon: Gem,
-    description: 'Gestionar materialidad y especificaciones',
-    color: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20',
-    iconColor: 'text-emerald-600'
-  },
-  {
-    title: 'Nuestros clientes',
-    href: '/adminpanel/testimonials',
-    icon: UserCheck,
-    description: 'Administrar testimonios y reseñas',
-    color: 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20',
-    iconColor: 'text-purple-600'
-  },
-  {
     title: 'Announcement Bar',
     href: '/adminpanel/announcementbar',
     icon: Megaphone,

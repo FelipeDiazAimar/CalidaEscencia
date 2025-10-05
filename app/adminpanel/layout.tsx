@@ -29,8 +29,6 @@ const navItems = [
   { href: '/adminpanel/carousel', label: 'Carrusel', icon: GalleryHorizontal },
   { href: '/adminpanel/vistaprincipal', label: 'Vista Principal', icon: Sparkles },
   { href: '/adminpanel/about', label: 'Sobre Nosotros', icon: Info },
-  { href: '/adminpanel/materials', label: 'Materiales', icon: Gem },
-  { href: '/adminpanel/testimonials', label: 'Nuestros clientes', icon: UserCheck },
   { href: '/adminpanel/announcementbar', label: 'Announcement Bar', icon: Megaphone },
   { href: '/adminpanel/finances', label: 'Finanzas', icon: CircleDollarSign },
   { href: '/adminpanel/orders', label: 'Pedidos', icon: ShoppingCart },
