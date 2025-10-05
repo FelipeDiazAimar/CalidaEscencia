@@ -400,7 +400,7 @@ export default function Header() {
               <Button 
                 onClick={performSearch}
                 disabled={!searchQuery.trim()}
-                size="sm"
+                size="default"
                 className="px-4"
               >
                 Buscar

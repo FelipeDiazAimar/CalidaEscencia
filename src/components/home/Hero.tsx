@@ -122,7 +122,7 @@ export default function Hero() {
                       <h1 className="font-headline text-4xl md:text-6xl lg:text-7xl drop-shadow-md">
                         {title}
                       </h1>
-                      <p className="mt-4 max-w-lg text-lg md:text-xl drop-shadow">
+                      <p className="mt-4 mb-6 max-w-lg mx-auto text-lg md:text-xl drop-shadow text-center">
                         {description}
                       </p>
                       <Button 
