@@ -30,8 +30,6 @@ const singleProductLinks: { title: string; href: string; description: string; }[
 
 const navLinks = [
   { href: "/public/about", label: "Sobre Nosotros" },
-  { href: "/public/gallery", label: "Nuestros Clientes" },
-  { href: "/public/materials", label: "Materiales" },
   { href: "/public/contact", label: "Contacto" },
 ];
 
@@ -160,6 +158,29 @@ export default function Header() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  // Close search when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isSearchOpen) {
+        const target = event.target as Element;
+        const searchArea = document.querySelector('[data-search-area]');
+        const searchButton = document.querySelector('[data-search-button]');
+        
+        if (searchArea && !searchArea.contains(target) && searchButton && !searchButton.contains(target)) {
+          setIsSearchOpen(false);
+        }
+      }
+    };
+
+    if (isSearchOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSearchOpen]);
 
   const handleBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -341,7 +362,7 @@ export default function Header() {
         </div>
         {/* Right side buttons - positioned absolutely at the right */}
         <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10 flex items-center gap-2 md:gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)} className="hover:bg-transparent">
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)} className="hover:bg-transparent" data-search-button>
               <Search className="!h-5 !w-5 text-[#9a7b68]" />
               <span className="sr-only">Abrir búsqueda</span>
             </Button>
@@ -362,7 +383,7 @@ export default function Header() {
             </Button>
         </div>
         {isSearchOpen && (
-          <div className="absolute left-0 right-0 pb-4 w-full flex justify-center bg-[#e8d2c5] backdrop-blur supports-[backdrop-filter]:bg-[#e8d2c5] border-b z-50">
+          <div className="absolute left-0 right-0 pb-4 w-full flex justify-center bg-[#e8d2c5] backdrop-blur supports-[backdrop-filter]:bg-[#e8d2c5] border-b z-50" data-search-area>
             <div className="relative w-full max-w-xl mt-4 px-4 flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

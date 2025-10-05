@@ -19,7 +19,7 @@ export default function ContactPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-24 items-start">
-            <div className="space-y-8" style={{ paddingRight: "20px" }}>
+            <div className="space-y-8 md:pr-5 mb-5 md:mb-0">
               <h2 className="font-headline text-2xl">Envíanos un mensaje</h2>
               <ContactForm />
             </div>

@@ -225,7 +225,7 @@ export default function AboutPage() {
           />
           <div className="absolute inset-0 bg-primary/85" />
           <div className="container relative text-primary-foreground text-center z-10 px-4 md:px-6">
-            <CreditCard className="mx-auto h-12 w-12 md:h-16 md:w-16 mb-4 md:mb-6 mt-4 md:mt-8" />
+            <CreditCard className="mx-auto h-12 w-12 md:h-16 md:w-16 mb-4 md:mb-6 mt-4 md:mt-8" style={{ color: 'white' }} />
             <h2 className="font-headline text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 px-4 md:px-0">
               {paymentSection?.title || 'Paga con total seguridad y comodidad'}
             </h2>

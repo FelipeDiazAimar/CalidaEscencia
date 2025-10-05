@@ -114,10 +114,10 @@ export default function VistaPrincipal() {
               <p className="text-sm sm:text-lg text-muted-foreground">
                 {displayData.descripcion}
               </p>
-              <Button asChild size="lg" className="w-full xs:w-auto">
+              <Button asChild className="h-10 bg-white hover:bg-gray-50 text-gray-900 px-4 w-full">
                 <Link href={displayData.enlace}>
                   {displayData.enlace_texto}
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5" style={{ color: 'white' }} />
                 </Link>
               </Button>
             </div>
