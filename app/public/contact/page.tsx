@@ -43,12 +43,6 @@ export default function ContactPage() {
                     Síguenos en Instagram
                   </Link>
                 </Button>
-                 <Button asChild size="lg" variant="outline">
-                  <Link href="#">
-                    <TikTokIcon className="mr-3 h-5 w-5" />
-                    Mira nuestros videos en TikTok
-                  </Link>
-                </Button>
               </div>
             </div>
           </div>
