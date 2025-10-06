@@ -98,7 +98,29 @@ export async function POST(request: NextRequest) {
     const resolvedNotificationUrl =
       notification_url ?? process.env.MERCADOPAGO_NOTIFICATION_URL ?? `${baseUrl}/api/mercadopago/webhook`;
 
+    const mergedPaymentMethods: PreferenceRequest['payment_methods'] = {
+      excluded_payment_methods: payment_methods?.excluded_payment_methods ?? [],
+      excluded_payment_types: payment_methods?.excluded_payment_types ?? [],
+      installments: payment_methods?.installments ?? 12,
+    };
+
+    if (payment_methods?.default_installments != null) {
+      mergedPaymentMethods.default_installments = payment_methods.default_installments;
+    }
+
+    if (payment_methods?.default_payment_method_id) {
+      const isExcluded = (payment_methods.excluded_payment_methods ?? []).some(
+        method => method.id === payment_methods.default_payment_method_id
+      );
+
+      if (!isExcluded) {
+        mergedPaymentMethods.default_payment_method_id = payment_methods.default_payment_method_id;
+      }
+    }
+
     // Crear la preferencia de pago con configuración completa
+    const defaultCurrencyId = process.env.MERCADOPAGO_CURRENCY_ID ?? 'ARS';
+
     const preferenceData: PreferenceRequest = {
       items: items.map((item: PreferenceItem) => ({
         id: item.id,
@@ -106,7 +128,7 @@ export async function POST(request: NextRequest) {
         description: item.description || item.title,
         unit_price: Number(item.unit_price),
         quantity: Number(item.quantity),
-        currency_id: item.currency_id || 'USD',
+        currency_id: item.currency_id || defaultCurrencyId,
         picture_url: item.picture_url,
         category_id: 'services', // Categoría general para servicios/productos
       })),
@@ -117,15 +139,10 @@ export async function POST(request: NextRequest) {
         integration_type: 'web',
         created_at: new Date().toISOString(),
       },
-      statement_descriptor: 'CalidaEscencia - Ecommerce',
+      statement_descriptor: 'AlgoBonitoSV - Ecommerce',
       external_reference: external_reference ?? `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       shipments,
-      payment_methods: {
-        excluded_payment_methods: [],
-        excluded_payment_types: [],
-        installments: 12, // Máximo de cuotas permitidas
-        ...payment_methods,
-      },
+      payment_methods: mergedPaymentMethods,
       expires: false, // La preferencia no expira
       expiration_date_from: undefined,
       expiration_date_to: undefined,
@@ -169,7 +186,19 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating preference:', error);
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    let message = error instanceof Error ? error.message : 'Error interno del servidor';
+    const extra: Record<string, unknown> = {};
+
+    if (typeof error === 'object' && error !== null) {
+      const maybeResponse = (error as { response?: { status?: number; data?: unknown } }).response;
+      if (maybeResponse) {
+        extra.mercadoPagoStatus = maybeResponse.status;
+        extra.mercadoPagoData = maybeResponse.data;
+        console.error('Mercado Pago response error:', maybeResponse.status, maybeResponse.data);
+      }
+    }
+
+    return NextResponse.json({ error: message, ...extra }, { status: 500 });
   }
 }

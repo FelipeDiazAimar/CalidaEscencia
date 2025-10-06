@@ -1187,6 +1187,9 @@ export interface Order {
   customer_email: string | null;
   status: OrderStatus;
   total_amount: number;
+  payment_method: string | null;
+  shipping_method: string | null;
+  shipping_cost: number | null;
   notes: string | null;
   whatsapp_sent_at: string | null;
   created_at: string;
@@ -1199,6 +1202,9 @@ export interface OrderInsert {
   customer_email?: string;
   status?: OrderStatus;
   total_amount?: number;
+  payment_method?: string;
+  shipping_method?: string;
+  shipping_cost?: number;
   notes?: string;
   whatsapp_sent_at?: string;
 }
@@ -1209,6 +1215,9 @@ export interface OrderUpdate {
   customer_email?: string;
   status?: OrderStatus;
   total_amount?: number;
+  payment_method?: string;
+  shipping_method?: string;
+  shipping_cost?: number;
   notes?: string;
   whatsapp_sent_at?: string;
 }
@@ -1225,7 +1234,7 @@ export interface OrderItem {
 }
 
 export interface OrderItemInsert {
-  order_id: string;
+  order_id?: string;
   product_id: string;
   product_name: string;
   product_price: number;

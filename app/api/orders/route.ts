@@ -14,7 +14,18 @@ interface OrderItemInput {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customer_name, customer_phone, customer_email, items, notes } = body;
+    const {
+      customer_name,
+      customer_phone,
+      customer_email,
+      items,
+      notes,
+      payment_method,
+      shipping_method,
+      shipping_cost,
+      total_amount,
+      payment_surcharge,
+    } = body;
 
     // Validate required fields
     if (!customer_name || !customer_phone || !items || items.length === 0) {
@@ -24,10 +35,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total amount
-    const total_amount = items.reduce((sum: number, item: any) => 
-      sum + (item.quantity * item.price), 0
+    const itemsSubtotal = items.reduce((sum: number, item: any) =>
+      sum + (Number(item.quantity) * Number(item.price ?? item.product_price ?? 0)), 0
     );
+
+    const normalizedShippingCost = Number(shipping_cost ?? 0);
+    const normalizedSurcharge = Number(payment_surcharge ?? 0);
+    const calculatedSurcharge = payment_method === 'mercadopago' && !payment_surcharge
+      ? (itemsSubtotal + normalizedShippingCost) * 0.10
+      : normalizedSurcharge;
+    const normalizedTotal = Number(total_amount ?? (itemsSubtotal + normalizedShippingCost + calculatedSurcharge));
 
     // Create order data
     const orderData: OrderInsert = {
@@ -35,7 +52,10 @@ export async function POST(request: NextRequest) {
       customer_phone,
       customer_email: customer_email || null,
       status: 'pending',
-      total_amount,
+      total_amount: Number(normalizedTotal.toFixed(2)),
+      payment_method,
+      shipping_method,
+      shipping_cost: Number(normalizedShippingCost.toFixed(2)),
       notes: notes || null,
     };
 
@@ -43,9 +63,9 @@ export async function POST(request: NextRequest) {
     const orderItems: OrderItemInput[] = items.map((item: any) => ({
       product_id: item.product_id,
       product_name: item.product_name || item.name, // Aceptar tanto product_name como name
-      product_price: item.price, // Mapear price a product_price
+      product_price: Number(item.price ?? item.product_price ?? 0), // Mapear price a product_price
       quantity: item.quantity,
-      subtotal: item.price * item.quantity, // Calcular subtotal
+      subtotal: Number((Number(item.price ?? item.product_price ?? 0) * Number(item.quantity)).toFixed(2)), // Calcular subtotal
     }));
 
     // Create order with items - convertir a OrderItemInsert agregando placeholders

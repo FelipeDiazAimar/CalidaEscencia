@@ -22,6 +22,7 @@ export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [shipping, setShipping] = useState<string>('retira');
   const [isProcessing, setIsProcessing] = useState(false);
+  const currencyId = process.env.NEXT_PUBLIC_MERCADOPAGO_CURRENCY_ID ?? 'ARS';
 
   useEffect(() => {
     cartStore.loadOnce();
@@ -39,7 +40,7 @@ export default function CheckoutPage() {
       title: item.variant ? `${item.name} - ${item.variant}` : item.name,
       quantity: item.qty,
       unit_price: item.price,
-      currency_id: 'USD',
+      currency_id: currencyId,
       description: item.variant || undefined,
     })),
     ...(shippingCost > 0 ? [{
@@ -47,7 +48,7 @@ export default function CheckoutPage() {
       title: shippingOptions.find(o => o.id === shipping)?.label || 'Envío',
       quantity: 1,
       unit_price: shippingCost,
-      currency_id: 'USD',
+      currency_id: currencyId,
       description: 'Costo de envío',
     }] : [])
   ];

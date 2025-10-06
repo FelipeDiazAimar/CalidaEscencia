@@ -11,6 +11,12 @@ interface CheckoutData {
   delivery_method: string;
 }
 
+const SHIPPING_OPTIONS: Record<string, { label: string; icon: string; cost: number }> = {
+  entrega: { label: 'Entrega a domicilio', icon: '🚚', cost: 0 },
+  recoger: { label: 'Recoger en tienda', icon: '🏪', cost: 0 },
+  coordinamos: { label: 'Coordinamos', icon: '🤝', cost: 0 },
+};
+
 const EMOJI = {
   wave: String.fromCodePoint(0x1F44B),
   person: String.fromCodePoint(0x1F464),
@@ -33,6 +39,27 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const cartSubtotal = total;
+  const selectedShipping = SHIPPING_OPTIONS[checkoutData.delivery_method] ?? SHIPPING_OPTIONS.entrega;
+  const shippingCost = selectedShipping.cost;
+  const paymentSurcharge = checkoutData.payment_method === 'mercadopago'
+    ? (cartSubtotal + shippingCost) * 0.10
+    : 0;
+  const finalTotal = cartSubtotal + shippingCost + paymentSurcharge;
+
+  const getPaymentMethodLabel = (method: string) => {
+    switch (method) {
+      case 'mercadopago':
+        return 'Mercado Pago';
+      case 'cash':
+        return 'Efectivo';
+      case 'transfer':
+        return 'Transferencia bancaria';
+      default:
+        return method;
+    }
+  };
+
   const handleWhatsAppOrder = async () => {
     setIsSubmitting(true);
     
@@ -42,7 +69,12 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
         customer_name: checkoutData.customer_name,
         customer_phone: '+503 0000-0000', // Placeholder ya que no pedimos teléfono
         customer_email: '', // Opcional
-        notes: `Método de pago: ${checkoutData.payment_method === 'efectivo' ? 'Efectivo' : 'Transferencia bancaria'}. Entrega: ${checkoutData.delivery_method === 'entrega' ? 'Entrega a domicilio' : 'Recoger en tienda'}.`,
+        payment_method: checkoutData.payment_method,
+        shipping_method: checkoutData.delivery_method,
+        shipping_cost: shippingCost,
+        payment_surcharge: paymentSurcharge,
+        total_amount: finalTotal,
+        notes: `Método de pago: ${getPaymentMethodLabel(checkoutData.payment_method)}. Entrega: ${selectedShipping.label}.`,
         items: items.map(item => ({
           product_id: item.product_id,
           product_name: item.name,
@@ -83,15 +115,22 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
       });
       
       // Agregar total
-      message += `${EMOJI.moneyBag} *Total: $${total.toFixed(2)}*\n\n`;
+      message += `${EMOJI.moneyBag} *Subtotal: $${cartSubtotal.toFixed(2)}*\n`;
+      if (shippingCost > 0) {
+        message += `${EMOJI.deliveryTruck} *Envío (${selectedShipping.label}):* $${shippingCost.toFixed(2)}\n`;
+      }
+      if (paymentSurcharge > 0) {
+        message += `${EMOJI.creditCard} *Recargo Mercado Pago (10%):* $${paymentSurcharge.toFixed(2)}\n`;
+      }
+      message += `\n${EMOJI.moneyBag} *Total: $${finalTotal.toFixed(2)}*\n\n`;
       
       // Agregar método de pago y entrega
-      message += `${EMOJI.creditCard} *Método de pago:* ${checkoutData.payment_method === 'efectivo' ? 'Efectivo' : 'Transferencia bancaria'}\n`;
-      message += `${EMOJI.deliveryTruck} *Método de entrega:* ${checkoutData.delivery_method === 'entrega' ? 'Entrega a domicilio' : 'Recoger en tienda'}\n\n`;
+      message += `${EMOJI.creditCard} *Método de pago:* ${getPaymentMethodLabel(checkoutData.payment_method)}\n`;
+      message += `${EMOJI.deliveryTruck} *Método de entrega:* ${selectedShipping.label}\n\n`;
       
       // Agregar información bancaria si es transferencia
-      if (checkoutData.payment_method !== 'efectivo') {
-        message += `${EMOJI.bank} *Alias:* CalidaEscencia\n`;
+      if (checkoutData.payment_method === 'transfer') {
+        message += `${EMOJI.bank} *Alias:* AlgoBonitoSV\n`;
         message += `${EMOJI.creditCard} *CBU:* 0000000000000000000000\n\n`;
       }
       
@@ -182,8 +221,8 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                       <input
                         type="radio"
                         name="payment_method"
-                        value="efectivo"
-                        checked={checkoutData.payment_method === 'efectivo'}
+                        value="cash"
+                        checked={checkoutData.payment_method === 'cash'}
                         onChange={(e) => setCheckoutData(prev => ({ ...prev, payment_method: e.target.value }))}
                         className="mr-2"
                       />
@@ -193,8 +232,8 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                       <input
                         type="radio"
                         name="payment_method"
-                        value="transferencia"
-                        checked={checkoutData.payment_method === 'transferencia'}
+                        value="transfer"
+                        checked={checkoutData.payment_method === 'transfer'}
                         onChange={(e) => setCheckoutData(prev => ({ ...prev, payment_method: e.target.value }))}
                         className="mr-2"
                       />
@@ -218,7 +257,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                         onChange={(e) => setCheckoutData(prev => ({ ...prev, delivery_method: e.target.value }))}
                         className="mr-2"
                       />
-                      🚚 Entrega a domicilio
+                      {SHIPPING_OPTIONS.entrega.icon} {SHIPPING_OPTIONS.entrega.label}
                     </label>
                     <label className="flex items-center">
                       <input
@@ -229,7 +268,18 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                         onChange={(e) => setCheckoutData(prev => ({ ...prev, delivery_method: e.target.value }))}
                         className="mr-2"
                       />
-                      🏪 Recoger en tienda
+                      {SHIPPING_OPTIONS.recoger.icon} {SHIPPING_OPTIONS.recoger.label}
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="delivery_method"
+                        value="coordinamos"
+                        checked={checkoutData.delivery_method === 'coordinamos'}
+                        onChange={(e) => setCheckoutData(prev => ({ ...prev, delivery_method: e.target.value }))}
+                        className="mr-2"
+                      />
+                      {SHIPPING_OPTIONS.coordinamos.icon} {SHIPPING_OPTIONS.coordinamos.label}
                     </label>
                   </div>
                 </div>
@@ -245,9 +295,27 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                       </div>
                     ))}
                   </div>
+                  <div className="border-t mt-2 pt-2 space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>${cartSubtotal.toFixed(2)}</span>
+                    </div>
+                    {shippingCost > 0 && (
+                      <div className="flex justify-between">
+                        <span>Envío ({selectedShipping.label})</span>
+                        <span>${shippingCost.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {paymentSurcharge > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>Recargo Mercado Pago (10%)</span>
+                        <span>${paymentSurcharge.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
                     <span>Total:</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>${finalTotal.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -256,8 +324,14 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                   {checkoutData.payment_method === 'mercadopago' ? (
                     <MercadoPagoCheckout
                       items={items}
-                      total={total}
+                      subtotal={cartSubtotal}
+                      shippingCost={shippingCost}
+                      shippingLabel={selectedShipping.label}
+                      paymentSurcharge={paymentSurcharge}
+                      total={finalTotal}
                       customerName={checkoutData.customer_name}
+                      paymentMethod={checkoutData.payment_method}
+                      deliveryMethod={checkoutData.delivery_method}
                       onSuccess={() => {
                         clearCart();
                         setShowCheckout(false);
