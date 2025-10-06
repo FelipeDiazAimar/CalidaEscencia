@@ -97,7 +97,7 @@ export default function AllProducts() {
               Nuestra Colección
             </h2>
             <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-lg text-muted-foreground px-1">
-              Explora todas nuestras piezas, diseñadas con amor y cuidado para ti.
+              Descubre todos nuestros productos para el hogar y el bienestar.
             </p>
           </div>
           <div className="text-center">
@@ -117,7 +117,7 @@ export default function AllProducts() {
               Nuestra Colección
             </h2>
             <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-lg text-muted-foreground px-1">
-              Explora todas nuestras piezas, diseñadas con amor y cuidado para ti.
+              Descubre todos nuestros productos para el hogar y el bienestar.
             </p>
           </div>
           <div className="text-center">
@@ -140,7 +140,7 @@ export default function AllProducts() {
               Nuestra Colección
             </h2>
             <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-lg text-muted-foreground px-1">
-              Explora todas nuestras piezas, diseñadas con amor y cuidado para ti.
+              Descubre todos nuestros productos para el hogar y el bienestar.
             </p>
           </div>
           <div className="text-center">
@@ -159,7 +159,7 @@ export default function AllProducts() {
             Nuestra Colección
           </h2>
           <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-lg text-muted-foreground px-1">
-            Explora todas nuestras piezas, diseñadas con amor y cuidado para ti.
+            Descubre todos nuestros productos para el hogar y el bienestar.
           </p>
         </div>
       </div>

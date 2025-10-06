@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import CartButton from "@/components/cart/CartButton";
 import { useCart } from "@/contexts/CartContext";
+import { useAdminSidebar } from "@/contexts/AdminSidebarContext";
 import CartDrawer from "@/components/cart/CartDrawer";
 import { cn } from "@/lib/utils";
 import { api } from '@/lib/api/products';
@@ -34,6 +35,7 @@ const navLinks = [
 ];
 
 export default function Header() {
+  const { toggleSidebar } = useAdminSidebar();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileProductsExpanded, setMobileProductsExpanded] = useState(false);
   const [mobileExpandedCategory, setMobileExpandedCategory] = useState<string | null>(null);
@@ -362,6 +364,18 @@ export default function Header() {
         </div>
         {/* Right side buttons - positioned absolutely at the right */}
         <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10 flex items-center gap-2 md:gap-3">
+            {/* Admin sidebar toggle button - only visible in admin panel */}
+            {isAdminPanel && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleSidebar}
+                className="hover:bg-transparent"
+              >
+                <PanelLeft className="!h-5 !w-5 text-[#9a7b68]" />
+                <span className="sr-only">Toggle sidebar</span>
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)} className="hover:bg-transparent" data-search-button>
               <Search className="!h-5 !w-5 text-[#9a7b68]" />
               <span className="sr-only">Abrir búsqueda</span>

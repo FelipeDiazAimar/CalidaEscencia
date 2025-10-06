@@ -106,7 +106,7 @@ export default function CategoryCarousel() {
               Nuestras Categorías
             </h2>
             <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-lg text-muted-foreground">
-              Encuentra la joya perfecta para cada estilo.
+              Descubre productos únicos para tu hogar y bienestar.
             </p>
           </div>
           <div className="flex justify-center items-center py-8">
@@ -118,55 +118,94 @@ export default function CategoryCarousel() {
   }
   return (
     <section className="py-10 sm:py-16 bg-primary/10">
-      <div className="container">
-        <div className="text-center mb-8 sm:mb-12 px-2">
+      <div className="w-full">
+        <div className="text-center mb-8 sm:mb-12 px-4">
           <h2 className="font-headline text-2xl sm:text-4xl font-bold tracking-tight">
             Nuestras Categorías
           </h2>
           <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-lg text-muted-foreground">
-            Encuentra la joya perfecta para cada estilo.
+            Descubre productos únicos para tu hogar y bienestar.
           </p>
         </div>
-        <Carousel
-          opts={{ align: "start", loop: true }}
-          className="w-full"
-        >
-          <CarouselContent>
+        {categories.length <= 5 ? (
+          // When few categories, display them centered without carousel
+          <div className="flex justify-center items-center">
+            <div 
+              className="flex items-center gap-4 sm:gap-6 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden max-w-full" 
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
             {categories.map((category) => (
-              <CarouselItem key={category.id} className="basis-1/4 sm:basis-1/4 md:basis-1/5 lg:basis-1/6 px-1 sm:px-2">
-                <Link href={getCategoryHref(category)}>
-                  <div className="flex flex-col items-center gap-1.5 sm:gap-4 group">
-                    <div className="w-14 h-14 sm:w-32 sm:h-32 rounded-full flex items-center justify-center border border-accent sm:border-4 transition-all duration-300">
-                      <div className="w-12 h-12 sm:w-28 sm:h-28 rounded-full overflow-hidden relative transition-all duration-300 group-hover:scale-105">
-                        <Image
-                          src={getCategoryImage(category)}
-                          alt={`Categoría ${category.name}`}
-                          width={200}
-                          height={200}
-                          className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-                          data-ai-hint={`${category.name.toLowerCase()} collection`}
-                        />
-                        <Image
-                          src={getCategoryHoverImage(category)}
-                          alt={`Categoría ${category.name}`}
-                          width={200}
-                          height={200}
-                          className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                          data-ai-hint={`${category.name.toLowerCase()} collection`}
-                        />
-                      </div>
-                    </div>
-                    <h3 className="font-headline text-[10px] leading-tight sm:text-xl text-center font-semibold tracking-tight">
-                      {category.name}
-                    </h3>
+              <Link key={category.id} href={getCategoryHref(category)} className="flex flex-col items-center gap-1.5 sm:gap-4 group flex-shrink-0">
+                <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-full flex items-center justify-center border border-accent sm:border-4 transition-all duration-300">
+                  <div className="w-16 h-16 sm:w-28 sm:h-28 rounded-full overflow-hidden relative transition-all duration-300 group-hover:scale-105">
+                    <Image
+                      src={getCategoryImage(category)}
+                      alt={`Categoría ${category.name}`}
+                      width={200}
+                      height={200}
+                      className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                      data-ai-hint={`${category.name.toLowerCase()} collection`}
+                    />
+                    <Image
+                      src={getCategoryHoverImage(category)}
+                      alt={`Categoría ${category.name}`}
+                      width={200}
+                      height={200}
+                      className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      data-ai-hint={`${category.name.toLowerCase()} collection`}
+                    />
                   </div>
-                </Link>
-              </CarouselItem>
+                </div>
+                <h3 className="font-headline text-xs leading-tight sm:text-lg text-center font-semibold tracking-tight min-h-[2.5rem] sm:min-h-[3rem] flex items-center">
+                  {category.name}
+                </h3>
+              </Link>
             ))}
-          </CarouselContent>
-          <CarouselPrevious variant="ghost" className="top-[40%] -left-4 sm:-left-6" />
-          <CarouselNext variant="ghost" className="top-[40%] -right-4 sm:-right-6" />
-        </Carousel>
+            </div>
+          </div>
+        ) : (
+          // When many categories, use carousel
+          <Carousel
+            opts={{ align: "start", loop: true }}
+            className="w-full"
+          >
+            <CarouselContent>
+              {categories.map((category) => (
+                <CarouselItem key={category.id} className="basis-1/4 sm:basis-1/4 md:basis-1/5 lg:basis-1/6 px-1 sm:px-2">
+                  <Link href={getCategoryHref(category)}>
+                    <div className="flex flex-col items-center gap-1.5 sm:gap-4 group">
+                      <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-full flex items-center justify-center border border-accent sm:border-4 transition-all duration-300">
+                        <div className="w-16 h-16 sm:w-28 sm:h-28 rounded-full overflow-hidden relative transition-all duration-300 group-hover:scale-105">
+                          <Image
+                            src={getCategoryImage(category)}
+                            alt={`Categoría ${category.name}`}
+                            width={200}
+                            height={200}
+                            className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                            data-ai-hint={`${category.name.toLowerCase()} collection`}
+                          />
+                          <Image
+                            src={getCategoryHoverImage(category)}
+                            alt={`Categoría ${category.name}`}
+                            width={200}
+                            height={200}
+                            className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                            data-ai-hint={`${category.name.toLowerCase()} collection`}
+                          />
+                        </div>
+                      </div>
+                      <h3 className="font-headline text-xs leading-tight sm:text-lg text-center font-semibold tracking-tight min-h-[2.5rem] sm:min-h-[3rem] flex items-center">
+                        {category.name}
+                      </h3>
+                    </div>
+                  </Link>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious variant="ghost" className="top-[40%] -left-4 sm:-left-6" />
+            <CarouselNext variant="ghost" className="top-[40%] -right-4 sm:-right-6" />
+          </Carousel>
+        )}
       </div>
     </section>
   );

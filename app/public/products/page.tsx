@@ -220,10 +220,10 @@ function ProductsContent() {
     if (categoryParam) {
       const categoryName = categoryMapping[categoryParam.toLowerCase()];
       if (categoryName) {
-        return `Explora nuestra colección completa de ${categoryName.toLowerCase()}`;
+        return `Descubre nuestros productos de ${categoryName.toLowerCase()}`;
       }
     }
-    return 'Explora todas nuestras piezas, diseñadas con amor y cuidado para ti.';
+    return 'Descubre todos nuestros productos para el hogar y bienestar.';
   };
 
   if (loading) {

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Home,
   Package,
@@ -19,6 +18,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Toaster } from 'sonner';
+import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
 
 const navItems = [
   { href: '/adminpanel', label: 'Dashboard', icon: Home },
@@ -36,7 +36,7 @@ const navItems = [
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { isSidebarOpen } = useAdminSidebar();
 
   // Hide announcement bar when in admin panel
   useEffect(() => {
@@ -58,28 +58,13 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   }, [user, isAdmin, loading, router]);
   */
 
-  // DEVELOPMENT MODE: Skip loading check
-  // TODO: Re-enable loading check when auth system is ready
-  /*
-  // Show loading while checking authentication
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  // Redirect if not authenticated
-  if (!user || !isAdmin) {
-    return null;
-  }
-  */
-
   return (
     <div className="min-h-screen">
-      {/* Fixed Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-40">
+  {/* Fixed Sidebar */}
+      <div
+        className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-40 transition-transform duration-300"
+        style={{ transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
+      >
         {/* Sidebar Header */}
         <div className="flex flex-col items-center p-4 border-b" style={{ marginTop: '80px' }}>
           <h3 className="text-sm font-bold text-black">ADMIN PANEL</h3>
@@ -112,8 +97,14 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
       
       {/* Main Content Area */}
-      <div className="w-full" style={{ marginLeft: '256px' }}>
-        <main className="min-h-screen p-4 md:p-6" style={{ marginRight: '288.5px' }}>
+      <div
+        className="w-full transition-[margin] duration-300"
+        style={{ marginLeft: isSidebarOpen ? '256px' : '0px' }}
+      >
+        <main
+          className="min-h-screen p-4 md:p-6 transition-[margin] duration-300"
+          style={{ marginRight: isSidebarOpen ? '288.5px' : '0px' }}
+        >
           {children}
         </main>
       </div>
