@@ -879,7 +879,7 @@ export default function AdminProductsPage() {
                           <img
                             src={product.cover_image}
                             alt={product.name}
-                            className="w-10 h-10 rounded object-cover border"
+                            className="w-10 h-10 rounded object-cover border mr-2"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                             }}

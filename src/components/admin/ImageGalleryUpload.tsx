@@ -132,26 +132,6 @@ export function ImageGalleryUpload({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-
-            {/* Preview de la imagen si existe */}
-            {imageUrl && (
-              <div className="mt-4 flex justify-center">
-                <div className="relative bg-gray-100 rounded-lg overflow-hidden" style={{ width: '80px', height: '128px' }}>
-                  <img
-                    src={imageUrl}
-                    alt={`Imagen ${index + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDE5VjVDMjEgMy45IDIwLjEgMyAxOSAzSDVDMy45IDMgMyAzLjkgMyA1VjE5QzMgMjAuMSAzLjkgMjEgNSAyMUgxOUMyMC4xIDIxIDIxIDIwLjEgMjEgMTlaIiBzdHJva2U9IiM5Q0E3QkYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik04LjUgMTBDOS4zIDEwIDEwIDkuMyAxMCA4LjVTOS4zIDcgOC41IDdTNyA3LjcgNyA4LjVTNy43IDEwIDguNSAxMFoiIGZpbGw9IiM5Q0E3QkYiLz4KPHA7dGggZD0iTTIxIDE1TDE2IDEwTDUgMjEiIHN0cm9rZT0iIzlDQTdCRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+';
-                    }}
-                  />
-                  {/* Overlay con número de imagen */}
-                  <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                    {index + 1}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         ))}
 
