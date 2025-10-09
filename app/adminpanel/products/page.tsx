@@ -162,6 +162,22 @@ export default function AdminProductsPage() {
     }
   }, [selectedCategory, selectedSubcategory, subcategories]);
 
+  // Filter subcategories for form when category changes
+  useEffect(() => {
+    if (formData.category_id) {
+      const filtered = subcategories.filter(sub => sub.category_id === formData.category_id);
+      setFilteredSubcategories(filtered);
+      
+      // Reset subcategory if it doesn't belong to selected category
+      if (formData.subcategory_id && !filtered.some(sub => sub.id === formData.subcategory_id)) {
+        setFormData(prev => ({ ...prev, subcategory_id: '' }));
+      }
+    } else {
+      setFilteredSubcategories([]);
+      setFormData(prev => ({ ...prev, subcategory_id: '' }));
+    }
+  }, [formData.category_id, subcategories]);
+
   // Filtered products based on search and filters
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
