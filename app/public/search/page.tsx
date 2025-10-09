@@ -229,7 +229,7 @@ function SearchPageContent() {
                   </li>
                 </ul>
               </div>
-              <Link href="/products">
+              <Link href="/public/products">
                 <Button className="bg-gradient-to-r from-neutral-700 to-gray-900 hover:from-neutral-800 hover:to-black text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
                   Explorar todos los productos
                 </Button>

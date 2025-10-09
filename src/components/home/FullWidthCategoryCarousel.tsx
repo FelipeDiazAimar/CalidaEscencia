@@ -14,29 +14,36 @@ import { ArrowRight } from "lucide-react";
 import { api } from "@/lib/api/products";
 import type { Category } from "@/types/database";
 
+// Slugify function for consistent URL generation
+const slugify = (v: string) =>
+  v
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
 // Fallback categories for when database is not available
 const fallbackCategories = [
   {
     name: "Pulseras",
-    href: "/products?category=pulseras",
+    href: "/public/products?category=pulseras",
     image: "https://picsum.photos/800/600?v=90",
     dataAiHint: "bracelets collection",
   },
   {
     name: "Anillos",
-    href: "/products?category=anillos",
+    href: "/public/products?category=anillos",
     image: "https://picsum.photos/800/600?v=91",
     dataAiHint: "rings collection",
   },
   {
     name: "Cadenas/Conjuntos",
-    href: "/products?category=collares",
+    href: "/public/products?category=collares",
     image: "https://picsum.photos/800/600?v=92",
     dataAiHint: "necklaces collection",
   },
   {
     name: "Aros",
-    href: "/products?category=aros",
+    href: "/public/products?category=aros",
     image: "https://picsum.photos/800/600?v=93",
     dataAiHint: "earrings collection",
   },
@@ -63,15 +70,15 @@ export default function FullWidthCategoryCarousel() {
       try {
         setIsLoading(true);
         const response = await api.categories.getAll();
-        
+
         if (response.success && response.data) {
           setCategories(response.data);
         } else {
-          console.error('Failed to load categories:', response.error);
+          console.error("Failed to load categories:", response.error);
           setCategories([]);
         }
       } catch (error) {
-        console.error('Error loading categories:', error);
+        console.error("Error loading categories:", error);
         setCategories([]);
       } finally {
         setIsLoading(false);
@@ -82,23 +89,27 @@ export default function FullWidthCategoryCarousel() {
   }, []);
 
   const getCategoryHref = (category: Category) => {
-    return `/products?category=${encodeURIComponent(category.name.toLowerCase())}`;
+    return `/public/products?category=${slugify(category.name)}`;
   };
 
   const getCategoryImage = (category: Category) => {
-  return category.portada_cards || "https://img.freepik.com/foto-gratis/fondo-textura-abstracta_1258-30553.jpg?semt=ais_hybrid&w=740&q=80";
+    return (
+      category.portada_cards ||
+      "https://img.freepik.com/foto-gratis/fondo-textura-abstracta_1258-30553.jpg?semt=ais_hybrid&w=740&q=80"
+    );
   };
   return (
     <section className="py-12 sm:py-16 bg-background">
       <div className="text-center mb-12 container">
-          <h2 className="font-headline text-3xl sm:text-4xl font-bold tracking-tight">
-            Explora Nuestras Categorías
-          </h2>
-          <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-            Descubre productos únicos para tu hogar navegando por nuestras categorías.
-          </p>
+        <h2 className="font-headline text-3xl sm:text-4xl font-bold tracking-tight">
+          Explora Nuestras Categorías
+        </h2>
+        <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
+          Descubre productos únicos para tu hogar navegando por nuestras
+          categorías.
+        </p>
       </div>
-      
+
       {isLoading ? (
         <div className="flex justify-center items-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -113,8 +124,14 @@ export default function FullWidthCategoryCarousel() {
         >
           <CarouselContent className="-ml-2 sm:-ml-4">
             {categories.map((category) => (
-              <CarouselItem key={category.id} className="basis-full sm:basis-1/2 md:basis-1/3 pl-2 sm:pl-4">
-                <Link href={getCategoryHref(category)} className="group block overflow-hidden relative">
+              <CarouselItem
+                key={category.id}
+                className="basis-full sm:basis-1/2 md:basis-1/3 pl-2 sm:pl-4"
+              >
+                <Link
+                  href={getCategoryHref(category)}
+                  className="group block overflow-hidden relative"
+                >
                   <div className="relative aspect-video">
                     <Image
                       src={getCategoryImage(category)}

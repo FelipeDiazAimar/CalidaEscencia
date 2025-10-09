@@ -13,32 +13,35 @@ import {
 import { api } from "@/lib/api/products";
 import type { Category } from "@/types/database";
 
+// Slugify function for consistent URL generation
+const slugify = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 // Fallback categories for when database is not available
 const fallbackCategories = [
   {
     name: "Anillos",
-    href: "/products?category=anillos",
+    href: "/public/products?category=anillos",
     image: "https://picsum.photos/200/200?v=70",
     hoverImage: "https://picsum.photos/200/200?v=80",
     dataAiHint: "rings collection",
   },
   {
     name: "Collares",
-    href: "/products?category=collares",
+    href: "/public/products?category=collares",
     image: "https://picsum.photos/200/200?v=71",
     hoverImage: "https://picsum.photos/200/200?v=81",
     dataAiHint: "necklaces collection",
   },
   {
     name: "Pulseras",
-    href: "/products?category=pulseras",
+    href: "/public/products?category=pulseras",
     image: "https://picsum.photos/200/200?v=72",
     hoverImage: "https://picsum.photos/200/200?v=82",
     dataAiHint: "bracelets collection",
   },
   {
     name: "Aros",
-    href: "/products?category=aros",
+    href: "/public/products?category=aros",
     image: "https://picsum.photos/200/200?v=73",
     hoverImage: "https://picsum.photos/200/200?v=83",
     dataAiHint: "earrings collection",
@@ -85,7 +88,7 @@ export default function CategoryCarousel() {
   }, []);
 
   const getCategoryHref = (category: Category) => {
-    return `/products?category=${encodeURIComponent(category.name.toLowerCase())}`;
+    return `/public/products?category=${slugify(category.name)}`;
   };
 
   const getCategoryImage = (category: Category) => {

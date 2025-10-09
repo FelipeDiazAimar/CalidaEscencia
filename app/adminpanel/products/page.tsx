@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,7 +46,7 @@ import StockOrderModal from '@/components/admin/StockOrderModal';
 import GeneralSalesModal from '@/components/admin/GeneralSalesModal';
 import ProductSalesModal from '@/components/admin/ProductSalesModal';
 import HistoryModal from '@/components/admin/HistoryModal';
-import { Plus, Edit, Trash2, Package, Loader2, ShoppingBag, Star, Sparkles, History, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Loader2, ShoppingBag, Star, Sparkles, History, TrendingUp, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { tempImageStore } from '@/lib/temp-image-store';
 import { TempImageUploader } from '@/lib/temp-image-uploader';
@@ -98,6 +98,12 @@ export default function AdminProductsPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [historyDefaultTab, setHistoryDefaultTab] = useState<'products' | 'sales' | 'stock'>('products');
 
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('name-asc');
+
   // Form state
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -146,18 +152,72 @@ export default function AdminProductsPage() {
 
   // Filter subcategories when category changes
   useEffect(() => {
-    if (formData.category_id) {
-      const filtered = subcategories.filter(sub => sub.category_id === formData.category_id);
-      setFilteredSubcategories(filtered);
-      // Reset subcategory if it doesn't belong to selected category
-      if (formData.subcategory_id && !filtered.find(sub => sub.id === formData.subcategory_id)) {
-        setFormData(prev => ({ ...prev, subcategory_id: '' }));
+    // Reset subcategory if it doesn't belong to selected category
+    if (selectedCategory !== 'all' && selectedSubcategory !== 'all') {
+      const availableSubs = getAvailableSubcategories();
+      const subcategoryExists = availableSubs.some(sub => sub.id === selectedSubcategory);
+      if (!subcategoryExists) {
+        setSelectedSubcategory('all');
       }
-    } else {
-      setFilteredSubcategories([]);
-      setFormData(prev => ({ ...prev, subcategory_id: '' }));
     }
-  }, [formData.category_id, subcategories]);
+  }, [selectedCategory, selectedSubcategory, subcategories]);
+
+  // Filtered products based on search and filters
+  const filteredProducts = useMemo(() => {
+    let filtered = [...products];
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product => product.category_id === selectedCategory);
+    }
+
+    // Filter by subcategory
+    if (selectedSubcategory !== 'all') {
+      filtered = filtered.filter(product => product.subcategory_id === selectedSubcategory);
+    }
+
+    // Sort products
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'price-asc':
+          return a.price - b.price;
+        case 'price-desc':
+          return b.price - a.price;
+        case 'stock-asc':
+          return a.stock - b.stock;
+        case 'stock-desc':
+          return b.stock - a.stock;
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [products, searchTerm, selectedCategory, selectedSubcategory, sortBy]);
+
+  // Get available subcategories based on selected category
+  const getAvailableSubcategories = () => {
+    if (selectedCategory === 'all') {
+      return subcategories;
+    }
+    return subcategories.filter(sub => sub.category_id === selectedCategory);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -222,11 +282,6 @@ export default function AdminProductsPage() {
       toast.error('La categoría es requerida');
       return;
     }
-    if (!formData.subcategory_id) {
-      console.log('❌ ProductsPage: Validation failed - missing subcategory');
-      toast.error('La subcategoría es requerida');
-      return;
-    }
     if (!formData.cost || parseFloat(formData.cost) <= 0) {
       console.log('❌ ProductsPage: Validation failed - invalid cost');
       toast.error('El costo debe ser mayor a 0');
@@ -246,7 +301,7 @@ export default function AdminProductsPage() {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         category_id: formData.category_id,
-        subcategory_id: formData.subcategory_id,
+        subcategory_id: formData.subcategory_id || undefined,
         cost: parseFloat(formData.cost),
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock) || 0,
@@ -445,6 +500,7 @@ export default function AdminProductsPage() {
   };
 
   const getSubcategoryName = (subcategoryId: string) => {
+    if (!subcategoryId) return 'Sin subcategoría';
     const subcategory = subcategories.find(sub => sub.id === subcategoryId);
     return subcategory ? subcategory.name : 'Subcategoría no encontrada';
   };
@@ -614,7 +670,7 @@ export default function AdminProductsPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="subcategory">Subcategoría *</Label>
+                  <Label htmlFor="subcategory">Subcategoría</Label>
                   <Select 
                     value={formData.subcategory_id} 
                     onValueChange={(value) => setFormData({ ...formData, subcategory_id: value })}
@@ -831,12 +887,144 @@ export default function AdminProductsPage() {
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{products.length}</div>
+          <div className="text-2xl font-bold">{filteredProducts.length}</div>
           <p className="text-xs text-muted-foreground">
             Productos registrados en el catálogo
           </p>
         </CardContent>
       </Card>
+
+      {/* Search and Filters Section - Desktop */}
+      <div className="hidden md:block">
+        <Card className="p-4">
+          <div className="flex items-center gap-4">
+            {/* Search Bar on the left */}
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar productos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            {/* Filters and Sort on the right */}
+            <div className="flex gap-2 flex-wrap">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Todas las categorías" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las categorías</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Todas las subcategorías" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las subcategorías</SelectItem>
+                  {getAvailableSubcategories().map((subcategory) => (
+                    <SelectItem key={subcategory.id} value={subcategory.id}>
+                      {subcategory.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Nombre A-Z</SelectItem>
+                  <SelectItem value="name-desc">Nombre Z-A</SelectItem>
+                  <SelectItem value="price-asc">Precio menor a mayor</SelectItem>
+                  <SelectItem value="price-desc">Precio mayor a menor</SelectItem>
+                  <SelectItem value="stock-asc">Stock menor a mayor</SelectItem>
+                  <SelectItem value="stock-desc">Stock mayor a menor</SelectItem>
+                  <SelectItem value="newest">Más nuevo primero</SelectItem>
+                  <SelectItem value="oldest">Más viejo primero</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Mobile Search and Filters Section */}
+      <div className="md:hidden space-y-4">
+        <Card className="p-4">
+          <div className="space-y-4">
+            {/* Mobile Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar productos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Mobile Filters */}
+            <div className="grid grid-cols-1 gap-3">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas las categorías" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las categorías</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas las subcategorías" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las subcategorías</SelectItem>
+                  {getAvailableSubcategories().map((subcategory) => (
+                    <SelectItem key={subcategory.id} value={subcategory.id}>
+                      {subcategory.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Nombre A-Z</SelectItem>
+                  <SelectItem value="name-desc">Nombre Z-A</SelectItem>
+                  <SelectItem value="price-asc">Precio menor a mayor</SelectItem>
+                  <SelectItem value="price-desc">Precio mayor a menor</SelectItem>
+                  <SelectItem value="stock-asc">Stock menor a mayor</SelectItem>
+                  <SelectItem value="stock-desc">Stock mayor a menor</SelectItem>
+                  <SelectItem value="newest">Más nuevo primero</SelectItem>
+                  <SelectItem value="oldest">Más viejo primero</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* Products Table */}
       <div className="border rounded-lg">
@@ -870,7 +1058,7 @@ export default function AdminProductsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product) => (
+              filteredProducts.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">

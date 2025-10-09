@@ -15,6 +15,9 @@ import { cn } from "@/lib/utils";
 import { api } from '@/lib/api/products';
 import type { Category, Subcategory } from '@/types/database';
 
+// Slugify function for consistent URL generation
+const slugify = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 // Fallback data in case API fails
 const fallbackProductCategories: Record<string, string[]> = {
   "Aros": ["Acero quirúrgico", "Acero blanco", "Acero dorado", "Plata 925"],
@@ -252,7 +255,7 @@ export default function Header() {
                             
                             {/* Category buttons */}
                             {Object.entries(productCategories).map(([category, subcategories]) => {
-                              const categorySlug = category.toLowerCase().replace(/\s/g, '-');
+                              const categorySlug = slugify(category);
                               const isExpanded = mobileExpandedCategory === category;
                               
                               return (
@@ -280,7 +283,7 @@ export default function Header() {
                                       {subcategories.map((subcategory) => (
                                         <Link
                                           key={subcategory}
-                                          href={`/public/products?category=${categorySlug}&material=${subcategory.toLowerCase().replace(/\s/g, '-')}`}
+                                          href={`/public/products?category=${categorySlug}&material=${slugify(subcategory)}`}
                                           onClick={() => setIsMobileMenuOpen(false)}
                                           className="block p-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/20 rounded-md transition-colors"
                                         >

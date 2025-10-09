@@ -23,6 +23,9 @@ import {
     navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 
+// Slugify function for consistent URL generation
+const slugify = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 const productCategories = {
     "Aros": ["Acero quirúrgico", "Acero blanco", "Acero dorado", "Plata 925"],
     "Collares": ["Acero quirúrgico", "Acero blanco", "Acero dorado", "Plata 925"],
@@ -72,7 +75,7 @@ export default function Header() {
               </Link>
               <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
                 <div className="flex flex-col space-y-3">
-                    <Link href="/products" className="text-lg">Productos</Link>
+                    <Link href="/public/products" className="text-lg">Productos</Link>
                     {navLinks.map(({ href, label }) => (
                         <Link
                           key={label}
@@ -119,19 +122,19 @@ export default function Header() {
                     <NavigationMenuContent>
                       <div className="grid grid-cols-5 gap-4 p-4 w-full">
               <div className="col-span-5 mb-4 pb-4 border-b">
-                <NavigationMenuLink href="/products" className="font-bold text-lg hover:underline">
+                <NavigationMenuLink href="/public/products" className="font-bold text-lg hover:underline">
                 Ver todos los productos
                 </NavigationMenuLink>
               </div>
                           {Object.entries(productCategories).map(([category, subcategories]) => (
                 <div key={category} className="flex flex-col">
-                  <NavigationMenuLink href={`/products?category=${category.toLowerCase().replace(/\s/g, '-')}`} className="font-headline font-bold text-lg mb-2 hover:underline">
+                  <NavigationMenuLink href={`/public/products?category=${slugify(category)}`} className="font-headline font-bold text-lg mb-2 hover:underline">
                   {category}
                   </NavigationMenuLink>
                                   <ul className="space-y-1">
                                       {subcategories.map(subcategory => (
                                           <li key={subcategory}>
-                        <NavigationMenuLink href={`/products?category=${category.toLowerCase().replace(/\s/g, '-')}&material=${subcategory.toLowerCase().replace(/\s/g, '-')}`} className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <NavigationMenuLink href={`/public/products?category=${slugify(category)}&material=${slugify(subcategory)}`} className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
                         {subcategory}
                         </NavigationMenuLink>
                                           </li>

@@ -13,16 +13,6 @@ import { toast } from 'sonner';
 
 const PRODUCTS_PER_PAGE = 12;
 
-// Map category names from URL to database
-const categoryMapping: Record<string, string> = {
-  'aros': 'aros',
-  'collares': 'collares', 
-  'anillos': 'anillos',
-  'pulseras': 'pulseras',
-  'piercings': 'piercings',
-  'accesorios': 'accesorios'
-};
-
 // Map material names from URL to database  
 const materialMapping: Record<string, string> = {
   'acero-quirurgico': 'Acero quirúrgico',
@@ -33,7 +23,10 @@ const materialMapping: Record<string, string> = {
 
 function ProductsContent() {
   const searchParams = useSearchParams();
-  
+
+  // Slugify function - same as in FiltersBarClient
+  const slugify = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
   // State management
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -58,7 +51,7 @@ function ProductsContent() {
   // Filter products when parameters change
   useEffect(() => {
     filterProducts();
-  }, [products, categoryParam, materialParam, sortParam, minPriceParam, maxPriceParam]);
+  }, [products, categories, subcategories, categoryParam, materialParam, sortParam, minPriceParam, maxPriceParam]);
 
   // Update page when pageParam changes
   useEffect(() => {
@@ -100,22 +93,34 @@ function ProductsContent() {
 
     // Filter by category
     if (categoryParam) {
-      const categoryName = categoryMapping[categoryParam.toLowerCase()];
-      if (categoryName) {
-        const category = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
-        if (category) {
-          filtered = filtered.filter(p => p.category_id === category.id);
-        }
+      // Find category by name (case insensitive, using same slugify as URL generation)
+      const category = categories.find(c => 
+        c.name.toLowerCase() === categoryParam.toLowerCase() ||
+        slugify(c.name) === categoryParam.toLowerCase()
+      );
+      if (category) {
+        filtered = filtered.filter(p => p.category_id === category.id);
       }
     }
 
     // Filter by material/subcategory
     if (materialParam) {
-      const materialName = materialMapping[materialParam.toLowerCase()] || materialParam;
-      const subcategory = subcategories.find(s => 
-        s.name.toLowerCase().includes(materialName.toLowerCase()) ||
-        materialName.toLowerCase().includes(s.name.toLowerCase())
-      );
+      // First try with material mapping
+      let materialName = materialMapping[materialParam.toLowerCase()] || materialParam;
+      
+      // Find subcategory by name (case insensitive, handling spaces/dashes)
+      const subcategory = subcategories.find(s => {
+        const dbName = s.name.toLowerCase();
+        const paramName = materialName.toLowerCase();
+        const dbNormalized = dbName.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const paramNormalized = paramName.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        
+        return dbName === paramName || 
+               dbNormalized === paramNormalized ||
+               dbName.includes(paramName) || 
+               paramName.includes(dbName);
+      });
+      
       if (subcategory) {
         filtered = filtered.filter(p => p.subcategory_id === subcategory.id);
       }
@@ -218,9 +223,12 @@ function ProductsContent() {
 
   const getPageDescription = () => {
     if (categoryParam) {
-      const categoryName = categoryMapping[categoryParam.toLowerCase()];
-      if (categoryName) {
-        return `Descubre nuestros productos de ${categoryName.toLowerCase()}`;
+      const category = categories.find(c => 
+        c.name.toLowerCase() === categoryParam.toLowerCase() ||
+        c.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') === categoryParam.toLowerCase()
+      );
+      if (category) {
+        return `Descubre nuestros productos de ${category.name.toLowerCase()}`;
       }
     }
     return 'Descubre todos nuestros productos para el hogar y bienestar.';
