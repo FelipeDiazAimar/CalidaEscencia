@@ -47,7 +47,7 @@ export default function ImagePreview({
   };
 
   // Handle file upload
-  const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -69,15 +69,37 @@ export default function ImagePreview({
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
 
-    // In a real app, you would upload to a cloud service here
-    // For now, we'll just simulate the upload process
-    setTimeout(() => {
-      // Simulate uploaded URL (in production, this would be the actual uploaded URL)
-      const simulatedUrl = `https://images.example.com/${Date.now()}_${file.name}`;
-      onChange(simulatedUrl);
+    try {
+      // Create FormData for upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'carousel'); // or 'products' depending on context
+
+      // Upload to API
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Use the real uploaded URL
+        setPreviewUrl(result.url);
+        onChange(result.url);
+        toast.success('Imagen cargada correctamente');
+      } else {
+        // Revert to empty on error
+        setPreviewUrl('');
+        toast.error(result.error || 'Error al subir la imagen');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setPreviewUrl('');
+      toast.error('Error al subir la imagen');
+    } finally {
       setIsLoading(false);
-      toast.success('Imagen cargada correctamente');
-    }, 1500);
+    }
   };
 
   // Handle image crop
