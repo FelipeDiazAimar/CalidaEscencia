@@ -53,11 +53,13 @@ import { TempImageUploader } from '@/lib/temp-image-uploader';
 
 // Import API functions and types
 import { api } from '@/lib/api/products';
+import { productAttributesApi } from '@/lib/api/productAttributes';
 import type { 
   Product,
   ProductInsert,
   Category,
-  Subcategory
+  Subcategory,
+  ProductAttribute
 } from '@/types/database';
 
 interface ProductFormData {
@@ -65,6 +67,7 @@ interface ProductFormData {
   description: string;
   category_id: string;
   subcategory_id: string;
+  attribute_id: string;
   cost: string;
   price: string;
   stock: string;
@@ -82,6 +85,8 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([]);
+  const [productAttributes, setProductAttributes] = useState<ProductAttribute[]>([]);
+  const [filteredAttributes, setFilteredAttributes] = useState<ProductAttribute[]>([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -110,6 +115,7 @@ export default function AdminProductsPage() {
     description: '',
     category_id: '',
     subcategory_id: '',
+    attribute_id: '',
     cost: '',
     price: '',
     stock: '',
@@ -178,6 +184,22 @@ export default function AdminProductsPage() {
     }
   }, [formData.category_id, subcategories]);
 
+  // Filter attributes for form when subcategory changes
+  useEffect(() => {
+    if (formData.subcategory_id) {
+      const filtered = productAttributes.filter(attr => attr.subcategory_id === formData.subcategory_id && attr.is_active);
+      setFilteredAttributes(filtered);
+      
+      // Reset attribute if it doesn't belong to selected subcategory
+      if (formData.attribute_id && !filtered.some(attr => attr.id === formData.attribute_id)) {
+        setFormData(prev => ({ ...prev, attribute_id: '' }));
+      }
+    } else {
+      setFilteredAttributes([]);
+      setFormData(prev => ({ ...prev, attribute_id: '' }));
+    }
+  }, [formData.subcategory_id, productAttributes]);
+
   // Filtered products based on search and filters
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
@@ -241,23 +263,31 @@ export default function AdminProductsPage() {
       const [
         productsRes,
         categoriesRes,
-        subcategoriesRes
+        subcategoriesRes,
+        attributesRes
       ] = await Promise.all([
         api.products.getAll(),
         api.categories.getAll(),
-        api.subcategories.getAll()
+        api.subcategories.getAll(),
+        productAttributesApi.getAll()
       ]);
 
       if (productsRes.success) setProducts(productsRes.data || []);
       if (categoriesRes.success) setCategories(categoriesRes.data || []);
       if (subcategoriesRes.success) setSubcategories(subcategoriesRes.data || []);
+      if (attributesRes.success) setProductAttributes(attributesRes.data || []);
 
       // Show any errors
       [productsRes, categoriesRes, subcategoriesRes].forEach(res => {
-        if (res.error) {
+        if (!res.success && res.error) {
           toast.error(`Error loading data: ${res.error}`);
         }
       });
+
+      // Attributes loading is optional - don't show error if table doesn't exist yet
+      if (!attributesRes.success && attributesRes.error && attributesRes.error !== 'Table not yet created') {
+        console.warn('Product attributes error:', attributesRes.error);
+      }
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -318,6 +348,7 @@ export default function AdminProductsPage() {
         description: formData.description.trim() || undefined,
         category_id: formData.category_id,
         subcategory_id: formData.subcategory_id || undefined,
+        attribute_id: formData.attribute_id || undefined,
         cost: parseFloat(formData.cost),
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock) || 0,
@@ -424,6 +455,7 @@ export default function AdminProductsPage() {
       description: product.description || '',
       category_id: product.category_id || '',
       subcategory_id: product.subcategory_id || '',
+      attribute_id: product.attribute_id || '',
       cost: product.cost?.toString() || '',
       price: product.price?.toString() || '',
       stock: product.stock?.toString() || '0',
@@ -496,6 +528,7 @@ export default function AdminProductsPage() {
       description: '',
       category_id: '',
       subcategory_id: '',
+      attribute_id: '',
       cost: '',
       price: '',
       stock: '',
@@ -519,6 +552,12 @@ export default function AdminProductsPage() {
     if (!subcategoryId) return 'Sin subcategoría';
     const subcategory = subcategories.find(sub => sub.id === subcategoryId);
     return subcategory ? subcategory.name : 'Subcategoría no encontrada';
+  };
+
+  const getAttributeName = (attributeId: string) => {
+    if (!attributeId) return 'Sin atributo';
+    const attribute = productAttributes.find(attr => attr.id === attributeId);
+    return attribute ? `${attribute.name}: ${attribute.value}` : 'Atributo no encontrado';
   };
 
   // Action functions for new features
@@ -663,7 +702,7 @@ export default function AdminProductsPage() {
             </DialogHeader>
             
             <div className="space-y-4 overflow-x-hidden" style={{ maxWidth: '100%', width: '100%' }}>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="category">Categoría *</Label>
                   <Select 
@@ -699,6 +738,26 @@ export default function AdminProductsPage() {
                       {filteredSubcategories.map((subcategory) => (
                         <SelectItem key={subcategory.id} value={subcategory.id}>
                           {subcategory.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="attribute">Atributo</Label>
+                  <Select 
+                    value={formData.attribute_id} 
+                    onValueChange={(value) => setFormData({ ...formData, attribute_id: value })}
+                    disabled={!formData.subcategory_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un atributo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredAttributes.map((attribute) => (
+                        <SelectItem key={attribute.id} value={attribute.id}>
+                          {attribute.name}: {attribute.value}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1050,6 +1109,7 @@ export default function AdminProductsPage() {
               <TableHead>Producto</TableHead>
               <TableHead>Categoría</TableHead>
               <TableHead>Subcategoría</TableHead>
+              <TableHead>Atributo</TableHead>
               <TableHead>Costo</TableHead>
               <TableHead>Precio</TableHead>
               <TableHead>Stock</TableHead>
@@ -1060,14 +1120,14 @@ export default function AdminProductsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                   <p className="text-muted-foreground">Cargando productos...</p>
                 </TableCell>
               </TableRow>
             ) : products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No hay productos registrados</h3>
                   <p className="text-muted-foreground">Comienza agregando tu primer producto</p>
@@ -1146,6 +1206,11 @@ export default function AdminProductsPage() {
                   <TableCell>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       {getSubcategoryName(product.subcategory_id || '')}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      {getAttributeName(product.attribute_id || '')}
                     </span>
                   </TableCell>
                   <TableCell>

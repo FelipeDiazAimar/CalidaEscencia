@@ -20,6 +20,11 @@ export interface Database {
         Insert: SubcategoryInsert;
         Update: SubcategoryUpdate;
       };
+      product_attributes: {
+        Row: ProductAttribute;
+        Insert: ProductAttributeInsert;
+        Update: ProductAttributeUpdate;
+      };
       models: {
         Row: Model;
         Insert: ModelInsert;
@@ -254,6 +259,42 @@ export interface SubcategoryUpdate {
   description?: string;
 }
 
+export interface ProductAttribute {
+  id: string;
+  subcategory_id: string;
+  name: string;
+  type: 'color' | 'aroma' | 'size' | 'material' | 'style' | 'variant';
+  value: string;
+  description: string | null;
+  color_hex: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductAttributeInsert {
+  subcategory_id: string;
+  name: string;
+  type?: 'color' | 'aroma' | 'size' | 'material' | 'style' | 'variant';
+  value: string;
+  description?: string;
+  color_hex?: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface ProductAttributeUpdate {
+  subcategory_id?: string;
+  name?: string;
+  type?: 'color' | 'aroma' | 'size' | 'material' | 'style' | 'variant';
+  value?: string;
+  description?: string;
+  color_hex?: string;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
 export interface Model {
   id: string;
   name: string;
@@ -344,6 +385,7 @@ export interface Product {
   description: string | null;
   category_id: string | null;
   subcategory_id: string | null;
+  attribute_id: string | null;
   model_id: string | null;
   name_id: string | null;
   cost: number;
@@ -364,6 +406,7 @@ export interface ProductInsert {
   description?: string;
   category_id?: string;
   subcategory_id?: string;
+  attribute_id?: string;
   model_id?: string;
   name_id?: string;
   cost?: number;
@@ -382,6 +425,7 @@ export interface ProductUpdate {
   description?: string;
   category_id?: string;
   subcategory_id?: string;
+  attribute_id?: string;
   model_id?: string;
   name_id?: string;
   cost?: number;
@@ -1058,6 +1102,7 @@ export interface ProductFormData {
   description?: string;
   category_id: string;
   subcategory_id: string;
+  attribute_id?: string;
   model_id?: string;
   name_id?: string;
   cost: number;
@@ -1267,6 +1312,8 @@ export interface CartItem {
   image?: string;
   category?: string;
   subcategory?: string;
+  attribute_id?: string;
+  attribute?: ProductAttribute;
 }
 
 // =====================================================

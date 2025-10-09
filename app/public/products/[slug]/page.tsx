@@ -77,13 +77,13 @@ async function RelatedProducts({ currentSlug }: { currentSlug: string }) {
     <div className="container pb-20">
   <Separator className="mb-10" />
   <h2 className="font-headline text-2xl md:text-3xl font-semibold tracking-tight mb-8 mt-12">También te puede gustar</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-4xl mx-auto">
         {related.map(r => {
           const slug = r.name.toLowerCase().replace(/\s+/g, '-');
           const image = r.cover_image || r.hover_image || '/placeholder-product.jpg';
           return (
             <a key={r.id} href={`/public/products/${slug}`} className="group block">
-              <div className="relative aspect-square overflow-hidden rounded-xl bg-muted ring-1 ring-border/40">
+              <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-muted ring-1 ring-border/40">
                 <Image src={image} alt={r.name} fill className="object-cover transition-all duration-500 group-hover:scale-105" />
               </div>
               <div className="pt-3">

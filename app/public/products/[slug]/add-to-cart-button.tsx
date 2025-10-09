@@ -15,44 +15,47 @@ interface ProductMinimal {
   variants?: string[]; // optional variant names
   category?: string;
   subcategory?: string;
+  attribute?: any; // ProductAttribute object
 }
 
 export default function AddToCartButton({ product }: { product: ProductMinimal }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
-  const [variant, setVariant] = useState<string | undefined>(product.variants?.[0]);
   const { addItem } = useCart();
 
   const add = () => setQty(q => q + 1);
   const sub = () => setQty(q => Math.max(1, q - 1));
 
   const handleAdd = () => {
-    // Use the actual product ID from the database
-    const productId = variant ? `${product.id}__${variant}` : product.id;
-    
+    // Use the actual product ID from the database, combined with attribute if present
+    const productId = product.attribute ? `${product.id}` : product.id;
+
     // Debug: Log product data being added to cart
     console.log('Adding to cart - product data:', product);
     console.log('Category:', product.category);
     console.log('Subcategory:', product.subcategory);
-    
+    console.log('Attribute:', product.attribute);
+
     const cartItem = {
       product_id: productId,
+      attribute_id: product.attribute?.id,
       slug: product.slug,
-      name: variant ? `${product.name} (${variant})` : product.name,
+      name: product.attribute ? `${product.name} (${product.attribute.value})` : product.name,
       price: product.price,
       quantity: qty,
       image: product.images?.[0],
       category: product.category,
       subcategory: product.subcategory,
+      attribute: product.attribute,
     };
-    
+
     console.log('Cart item being added:', cartItem);
-    
+
     addItem(cartItem);
 
-    toast({ 
-      title: 'Añadido al carrito', 
-      description: `${qty} × ${product.name}${variant ? ' (' + variant + ')' : ''}` 
+    toast({
+      title: 'Añadido al carrito',
+      description: `${qty} × ${product.name}${product.attribute ? ' (' + product.attribute.value + ')' : ''}`
     });
 
     setAdded(true);
@@ -61,22 +64,6 @@ export default function AddToCartButton({ product }: { product: ProductMinimal }
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      {product.variants && product.variants.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {product.variants.map(v => {
-            const active = v === variant;
-            return (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setVariant(v)}
-                className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${active ? 'bg-primary text-primary-foreground border-primary' : 'hover:border-primary/60'}`}
-              >{v}</button>
-            );
-          })}
-        </div>
-      )}
-      
       {/* Mobile-only compact layout */}
       <div className="md:hidden">
         <div className="flex items-center gap-2 w-full">

@@ -40,10 +40,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     console.log('CartContext addItem received:', newItem);
     console.log('Category in CartContext:', newItem.category);
     console.log('Subcategory in CartContext:', newItem.subcategory);
+    console.log('Attribute in CartContext:', newItem.attribute);
     
     setItems(currentItems => {
+      // Find existing item by product_id AND attribute_id (if present)
       const existingItemIndex = currentItems.findIndex(
-        item => item.product_id === newItem.product_id
+        item => item.product_id === newItem.product_id && 
+                item.attribute_id === newItem.attribute_id
       );
 
       if (existingItemIndex >= 0) {

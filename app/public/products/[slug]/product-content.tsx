@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import AddToCartButton from "./add-to-cart-button";
 import { CreditCard, Truck, Shield, RefreshCw, Gem, Leaf, Sparkles, ShieldCheck } from 'lucide-react';
+import { productAttributesApi } from '@/lib/api/productAttributes';
+import type { ProductAttribute } from '@/types/database';
 
 interface Product {
   name: string;
@@ -20,9 +22,10 @@ interface Product {
   category?: string | null;
   subcategory?: string | null;
   stock?: number | null;
+  attribute_id?: string | null;
   // Nested category and subcategory from join
   categories?: { name: string } | null;
-  subcategories?: { name: string } | null;
+  subcategories?: { id: string; name: string } | null;
 }
 
 interface ProductGalleryProps {
@@ -53,6 +56,10 @@ export default function ProductGallery({
 
   const initialMain = mainImage ?? allImages[0];
   const [currentMain, setCurrentMain] = useState<string | undefined>(initialMain);
+
+  // Attribute selection state
+  const [availableAttributes, setAvailableAttributes] = useState<ProductAttribute[]>([]);
+  const [selectedAttribute, setSelectedAttribute] = useState<ProductAttribute | null>(null);
 
   const hoverRef = useRef(false);
   const idxRef = useRef(0);
@@ -187,6 +194,37 @@ export default function ProductGallery({
     };
   }, [allImages, currentMain]);
 
+  // Load available attributes for this product's subcategory
+  useEffect(() => {
+    const loadAttributes = async () => {
+      if (!product.subcategories?.id) return;
+      
+      try {
+        const response = await productAttributesApi.getBySubcategory(product.subcategories.id);
+        const attributes = response.data || [];
+        setAvailableAttributes(attributes);
+        
+        // If product has a pre-assigned attribute_id, select that specific attribute
+        if (product.attribute_id && attributes.length > 0) {
+          const preAssignedAttribute = attributes.find(attr => attr.id === product.attribute_id);
+          if (preAssignedAttribute) {
+            setSelectedAttribute(preAssignedAttribute);
+          } else if (attributes.length > 0) {
+            // Fallback to first attribute if pre-assigned not found
+            setSelectedAttribute(attributes[0]);
+          }
+        } else if (attributes.length > 0) {
+          // Auto-select first attribute if no pre-assigned attribute
+          setSelectedAttribute(attributes[0]);
+        }
+      } catch (error) {
+        console.error('Error loading product attributes:', error);
+      }
+    };
+
+    loadAttributes();
+  }, [product.subcategories?.id, product.attribute_id]);
+
   // Prepare product object for AddToCartButton
   const productSlug = product.name.toLowerCase().replace(/\s+/g, '-');
   
@@ -205,6 +243,7 @@ export default function ProductGallery({
     images: allImages,
     category: product.categories?.name || product.category,
     subcategory: product.subcategories?.name || product.subcategory,
+    attribute: selectedAttribute,
   };
   
   // Debug: Log productForCart to see what we're sending to AddToCartButton
@@ -338,6 +377,30 @@ export default function ProductGallery({
               </span>
             </div>
           </div>
+
+          {/* Attribute Selection with Buttons */}
+          {availableAttributes.length > 0 && (
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground">
+                Elige una opción:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {availableAttributes.map((attribute) => (
+                  <button
+                    key={attribute.id}
+                    onClick={() => setSelectedAttribute(attribute)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
+                      selectedAttribute?.id === attribute.id
+                        ? 'bg-gray-500 text-black border-gray-500 shadow-md'
+                        : 'bg-background text-black border-border hover:bg-muted hover:border-primary/50'
+                    }`}
+                  >
+                    {attribute.value}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <p className="text-xs text-muted-foreground mt-3">Este producto se añadirá a tu pedido y se confirmará por WhatsApp. No es un pago inmediato.</p>
         </div>

@@ -14,10 +14,12 @@ import {
   ShoppingCart,
   Info,
   Megaphone,
+  Palette,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Toaster } from 'sonner';
+import { useAuth } from '@/lib/api/auth';
 import { useAdminSidebar } from '@/contexts/AdminSidebarContext';
 
 const navItems = [
@@ -25,6 +27,7 @@ const navItems = [
   { href: '/adminpanel/products', label: 'Productos', icon: Package },
   { href: '/adminpanel/names', label: 'Categorías', icon: Users },
   { href: '/adminpanel/models', label: 'Subcategorías', icon: Users },
+  { href: '/adminpanel/attributes', label: 'Atributos', icon: Palette },
   { href: '/adminpanel/faq', label: 'Preguntas frecuentes', icon: MessageSquareQuote },
   { href: '/adminpanel/carousel', label: 'Carrusel', icon: GalleryHorizontal },
   { href: '/adminpanel/vistaprincipal', label: 'Vista Principal', icon: Sparkles },
@@ -37,6 +40,8 @@ const navItems = [
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isSidebarOpen } = useAdminSidebar();
+  const { user, isAdmin, loading } = useAuth();
+  const router = useRouter();
 
   // Hide announcement bar when in admin panel
   useEffect(() => {

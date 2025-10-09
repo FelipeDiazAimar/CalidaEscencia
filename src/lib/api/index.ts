@@ -5,6 +5,9 @@
 // Product and inventory APIs
 export { api as productApi, vistaPrincipalApi } from './products';
 
+// Product Attributes APIs
+export { productAttributesApi } from './productAttributes';
+
 // Finance APIs
 export { financeApi } from './finances';
 

@@ -746,7 +746,7 @@ export const productsApi = {
         .select(`
           *,
           categories(name),
-          subcategories(name)
+          subcategories(id, name)
         `)
         .eq('name', fullName)
         .eq('is_active', true)
@@ -762,7 +762,7 @@ export const productsApi = {
         .select(`
           *,
           categories(name),
-          subcategories(name)
+          subcategories(id, name)
         `)
         .ilike('name', `%${fullName}%`)
         .eq('is_active', true)
@@ -781,7 +781,7 @@ export const productsApi = {
             .select(`
               *,
               categories(name),
-              subcategories(name)
+              subcategories(id, name)
             `)
             .ilike('name', `%${term}%`)
             .eq('is_active', true)
