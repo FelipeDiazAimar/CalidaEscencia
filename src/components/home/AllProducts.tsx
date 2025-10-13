@@ -73,6 +73,49 @@ export default function AllProducts() {
     }).format(price);
   };
 
+  const generatePaginationItems = (): (number | string)[] => {
+    const items: (number | string)[] = [];
+    const maxVisiblePages = 5; // Maximum number of page numbers to show
+
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(i);
+      }
+    } else {
+      // Always show first page
+      items.push(1);
+
+      // Calculate range around current page
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      // Add ellipsis after first page if needed
+      if (start > 2) {
+        items.push('...');
+      }
+
+      // Add pages around current page
+      for (let i = start; i <= end; i++) {
+        items.push(i);
+      }
+
+      // Add ellipsis before last page if needed
+      if (end < totalPages - 1) {
+        items.push('...');
+      }
+
+      // Always show last page (if different from first)
+      if (totalPages > 1) {
+        items.push(totalPages);
+      }
+    }
+
+    return items;
+  };
+
+  const paginationItems = generatePaginationItems();
+
   const generateSlug = (name: string) => {
     return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
   };
@@ -223,30 +266,36 @@ export default function AllProducts() {
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="disabled:opacity-50"
+                  className="disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <PaginationPrevious href="#" onClick={(e) => e.preventDefault()} />
                 </button>
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <PaginationItem key={page}>
-                  <PaginationLink
-                    href="#"
-                    isActive={currentPage === page}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handlePageChange(page);
-                    }}
-                  >
-                    {page}
-                  </PaginationLink>
-                </PaginationItem>
+              {paginationItems.map((item, index) => (
+                item === '...' ? (
+                  <PaginationItem key={`ellipsis-${index}`}>
+                    <span className="px-3 py-2 text-sm">...</span>
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={item}>
+                    <PaginationLink
+                      href="#"
+                      isActive={currentPage === item}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(item as number);
+                      }}
+                    >
+                      {item}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
               ))}
               <PaginationItem>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="disabled:opacity-50"
+                  className="disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <PaginationNext href="#" onClick={(e) => e.preventDefault()} />
                 </button>

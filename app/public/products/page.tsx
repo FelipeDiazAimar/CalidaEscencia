@@ -192,6 +192,49 @@ function ProductsContent() {
   const startIndex = (validCurrentPage - 1) * PRODUCTS_PER_PAGE;
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
 
+  const generatePaginationItems = (): (number | string)[] => {
+    const items: (number | string)[] = [];
+    const maxVisiblePages = 5; // Maximum number of page numbers to show
+
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(i);
+      }
+    } else {
+      // Always show first page
+      items.push(1);
+
+      // Calculate range around current page
+      const start = Math.max(2, validCurrentPage - 1);
+      const end = Math.min(totalPages - 1, validCurrentPage + 1);
+
+      // Add ellipsis after first page if needed
+      if (start > 2) {
+        items.push('...');
+      }
+
+      // Add pages around current page
+      for (let i = start; i <= end; i++) {
+        items.push(i);
+      }
+
+      // Add ellipsis before last page if needed
+      if (end < totalPages - 1) {
+        items.push('...');
+      }
+
+      // Always show last page (if different from first)
+      if (totalPages > 1) {
+        items.push(totalPages);
+      }
+    }
+
+    return items;
+  };
+
+  const paginationItems = generatePaginationItems();
+
   // Calculate price range for filters
   const allPrices = products.map(p => p.price || 0).filter(p => p > 0);
   const globalMinPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
@@ -351,41 +394,47 @@ function ProductsContent() {
             </div>
             {/* Pagination */}
             {totalPages > 1 && (
-              <Pagination className="justify-center px-4 md:px-0">
+              <Pagination className="justify-center px-4 md:px-0 mb-8">
                 <PaginationContent>
-                  {validCurrentPage > 1 && (
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        href={`/public/products?${new URLSearchParams({
-                          ...Object.fromEntries(searchParams?.entries() || []),
-                          page: String(validCurrentPage - 1)
-                        }).toString()}`}
-                      />
-                    </PaginationItem>
-                  )}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <PaginationItem key={page}>
-                      <PaginationLink 
-                        href={`/public/products?${new URLSearchParams({
-                          ...Object.fromEntries(searchParams?.entries() || []),
-                          page: String(page)
-                        }).toString()}`}
-                        isActive={page === validCurrentPage}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href={validCurrentPage > 1 ? `/public/products?${new URLSearchParams({
+                        ...Object.fromEntries(searchParams?.entries() || []),
+                        page: String(validCurrentPage - 1)
+                      }).toString()}` : "#"}
+                      className={validCurrentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                      onClick={validCurrentPage <= 1 ? (e) => e.preventDefault() : undefined}
+                    />
+                  </PaginationItem>
+                  {paginationItems.map((item, index) => (
+                    item === '...' ? (
+                      <PaginationItem key={`ellipsis-${index}`}>
+                        <span className="px-3 py-2 text-sm">...</span>
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={item}>
+                        <PaginationLink
+                          href={`/public/products?${new URLSearchParams({
+                            ...Object.fromEntries(searchParams?.entries() || []),
+                            page: String(item)
+                          }).toString()}`}
+                          isActive={item === validCurrentPage}
+                        >
+                          {item}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
                   ))}
-                  {validCurrentPage < totalPages && (
-                    <PaginationItem>
-                      <PaginationNext 
-                        href={`/public/products?${new URLSearchParams({
-                          ...Object.fromEntries(searchParams?.entries() || []),
-                          page: String(validCurrentPage + 1)
-                        }).toString()}`}
-                      />
-                    </PaginationItem>
-                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href={validCurrentPage < totalPages ? `/public/products?${new URLSearchParams({
+                        ...Object.fromEntries(searchParams?.entries() || []),
+                        page: String(validCurrentPage + 1)
+                      }).toString()}` : "#"}
+                      className={validCurrentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                      onClick={validCurrentPage >= totalPages ? (e) => e.preventDefault() : undefined}
+                    />
+                  </PaginationItem>
                 </PaginationContent>
               </Pagination>
             )}
