@@ -61,6 +61,9 @@ import type {
   AboutContent,
   AboutContentInsert,
   AboutContentUpdate,
+  ShippingMethod,
+  ShippingMethodInsert,
+  ShippingMethodUpdate,
 } from '@/types/database';
 
 // =====================================================
@@ -3160,6 +3163,100 @@ const aboutContentApi = {
   },
 };
 
+// =====================================================
+// SHIPPING METHODS API
+// =====================================================
+
+export const shippingMethodsApi = {
+  async getAll(): Promise<ApiResponse<ShippingMethod[]>> {
+    try {
+      const { data, error } = await supabase!
+        .from('shipping_methods')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return createResponse(data || [], null);
+    } catch (error) {
+      return createResponse([], handleError(error));
+    }
+  },
+
+  async getById(id: string): Promise<ApiResponse<ShippingMethod>> {
+    try {
+      const { data, error } = await supabase!
+        .from('shipping_methods')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return createResponse(data, null);
+    } catch (error) {
+      return createResponse(null, handleError(error));
+    }
+  },
+
+  async create(method: ShippingMethodInsert): Promise<ApiResponse<ShippingMethod>> {
+    try {
+      const { data, error } = await supabase!
+        .from('shipping_methods')
+        .insert(method)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return createResponse(data, null);
+    } catch (error) {
+      return createResponse(null, handleError(error));
+    }
+  },
+
+  async update(id: string, updates: ShippingMethodUpdate): Promise<ApiResponse<ShippingMethod>> {
+    try {
+      const { data, error } = await supabase!
+        .from('shipping_methods')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return createResponse(data, null);
+    } catch (error) {
+      return createResponse(null, handleError(error));
+    }
+  },
+
+  async delete(id: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await supabase!
+        .from('shipping_methods')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return createResponse(true, null);
+    } catch (error) {
+      return createResponse(false, handleError(error));
+    }
+  },
+
+  async reorder(id: string, newOrder: number): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await supabase!
+        .from('shipping_methods')
+        .update({ display_order: newOrder })
+        .eq('id', id);
+
+      if (error) throw error;
+      return createResponse(true, null);
+    } catch (error) {
+      return createResponse(false, handleError(error));
+    }
+  },
+};
+
 export const api = {
   categories: categoriesApi,
   subcategories: subcategoriesApi,
@@ -3177,4 +3274,5 @@ export const api = {
   websiteMaterials: websiteMaterialsApi,
   materialsContent: materialsContentApi,
   aboutContent: aboutContentApi,
+  shippingMethods: shippingMethodsApi,
 };

@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Plus, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Loader2, Save, Plus, Eye, EyeOff, Trash2, Truck, Edit2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import { productApi, vistaPrincipalApi } from '@/lib/api';
-import type { VistaPrincipal, VistaPrincipalInsert, VistaPrincipalUpdate } from '@/types/database';
+import type { VistaPrincipal, VistaPrincipalInsert, VistaPrincipalUpdate, ShippingMethod, ShippingMethodInsert, ShippingMethodUpdate } from '@/types/database';
 import { tempImageStore, TempImageStore } from '@/lib/temp-image-store';
 
 const MIME_TYPE_EXTENSION_MAP: Record<string, string> = {
@@ -27,10 +29,18 @@ const DEFAULT_PAYMENT_TITLE = 'Métodos de Pago';
 const DEFAULT_PAYMENT_SUBTITLE = 'Paga de forma rápida y segura.';
 const DEFAULT_PAYMENT_BACKGROUND_IMAGE = 'https://picsum.photos/1200/400?v=63';
 const DEFAULT_PAYMENT_METHODS = [
-  'Tarjetas de Crédito / Débito',
-  'Transferencia Bancaria',
-  'Pago Contra Entrega',
+  'Tarjetas de crédito/débito (pago en línea seguro)',
+  'Transferencia bancaria (Banco Agrícola, BAC)',
+  'Pago contra entrega (disponible en San Salvador)',
 ];
+
+const DEFAULT_SHIPPING_TITLE = 'Detalles de Envío';
+const DEFAULT_SHIPPING_NATIONAL_TITLE = 'Envíos Nacionales (El Salvador)';
+const DEFAULT_SHIPPING_NATIONAL_DELIVERY_TIME = '2-3 días hábiles';
+const DEFAULT_SHIPPING_NATIONAL_COST = '$3.50 tarifa estándar';
+const DEFAULT_SHIPPING_NATIONAL_PACKAGING = 'Tus joyas viajan seguras en nuestro empaque de regalo';
+const DEFAULT_SHIPPING_INTERNATIONAL_TITLE = 'Envíos Internacionales';
+const DEFAULT_SHIPPING_INTERNATIONAL_DESCRIPTION = '¿Vives fuera de El Salvador? ¡No hay problema! Contáctanos directamente por WhatsApp para cotizar tu envío a cualquier parte del mundo.';
 
 export default function VistaPrincipalAdminPage() {
   const [vistaPrincipal, setVistaPrincipal] = useState<VistaPrincipal | null>(null);
@@ -55,6 +65,22 @@ export default function VistaPrincipalAdminPage() {
   const [paymentMethods, setPaymentMethods] = useState<string[]>([...DEFAULT_PAYMENT_METHODS]);
   const [isLoadingPayment, setIsLoadingPayment] = useState(true);
   const [isSavingPayment, setIsSavingPayment] = useState(false);
+
+  // Shipping methods section state
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
+  const [editingShippingMethod, setEditingShippingMethod] = useState<ShippingMethod | null>(null);
+  const [isLoadingShipping, setIsLoadingShipping] = useState(true);
+  const [isSavingShipping, setIsSavingShipping] = useState(false);
+  const [isShippingDialogOpen, setIsShippingDialogOpen] = useState(false);
+
+  // Shipping method form state
+  const [shippingMethodForm, setShippingMethodForm] = useState<ShippingMethodInsert>({
+    title: '',
+    description: '',
+    icon_name: '',
+    is_active: true,
+    display_order: 0,
+  });
   
   const { toast } = useToast();
 
@@ -153,6 +179,7 @@ export default function VistaPrincipalAdminPage() {
   useEffect(() => {
     loadVistaPrincipal();
     loadPaymentMethods();
+    loadShippingDetails();
   }, []);
 
   const loadVistaPrincipal = async () => {
@@ -249,6 +276,34 @@ export default function VistaPrincipalAdminPage() {
       setPaymentMethods([...DEFAULT_PAYMENT_METHODS]);
     } finally {
       setIsLoadingPayment(false);
+    }
+  };
+
+  const loadShippingDetails = async () => {
+    try {
+      setIsLoadingShipping(true);
+      const response = await productApi.shippingMethods.getAll();
+
+      if (response.error) {
+        console.error('Error loading shipping methods:', response.error);
+        toast({
+          title: "Error",
+          description: "Error al cargar los métodos de envío",
+          variant: "destructive",
+        });
+      }
+
+      setShippingMethods(response.data || []);
+    } catch (error) {
+      console.error('Error loading shipping methods:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar los métodos de envío",
+        variant: "destructive",
+      });
+      setShippingMethods([]);
+    } finally {
+      setIsLoadingShipping(false);
     }
   };
 
@@ -418,6 +473,116 @@ export default function VistaPrincipalAdminPage() {
     }
   };
 
+  const handleEditShippingMethod = (method: ShippingMethod | null) => {
+    setEditingShippingMethod(method);
+    if (method) {
+      setShippingMethodForm({
+        title: method.title,
+        description: method.description,
+        icon_name: method.icon_name || '',
+        is_active: method.is_active,
+        display_order: method.display_order,
+      });
+    } else {
+      setShippingMethodForm({
+        title: '',
+        description: '',
+        icon_name: '',
+        is_active: true,
+        display_order: 0,
+      });
+    }
+    setIsShippingDialogOpen(true);
+  };
+
+  const handleSaveShippingMethod = async () => {
+    const sanitizedTitle = shippingMethodForm.title.trim();
+    const sanitizedDescription = shippingMethodForm.description.trim();
+
+    if (!sanitizedTitle || !sanitizedDescription) {
+      toast({
+        title: "Error",
+        description: "El título y descripción son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSavingShipping(true);
+
+      let response;
+      if (editingShippingMethod) {
+        response = await productApi.shippingMethods.update(editingShippingMethod.id, {
+          title: sanitizedTitle,
+          description: sanitizedDescription,
+          icon_name: shippingMethodForm.icon_name || undefined,
+          is_active: shippingMethodForm.is_active,
+          display_order: shippingMethodForm.display_order,
+        });
+      } else {
+        response = await productApi.shippingMethods.create({
+          title: sanitizedTitle,
+          description: sanitizedDescription,
+          icon_name: shippingMethodForm.icon_name || undefined,
+          is_active: shippingMethodForm.is_active,
+          display_order: shippingMethodForm.display_order,
+        });
+      }
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      toast({
+        title: "Éxito",
+        description: `Método de envío ${editingShippingMethod ? 'actualizado' : 'creado'} correctamente`,
+      });
+
+      setIsShippingDialogOpen(false);
+      setEditingShippingMethod(null);
+      await loadShippingDetails();
+    } catch (error) {
+      console.error('Error saving shipping method:', error);
+      toast({
+        title: "Error",
+        description: "Error al guardar el método de envío",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingShipping(false);
+    }
+  };
+
+  const handleToggleShippingMethod = async (method: ShippingMethod) => {
+    try {
+      setIsSavingShipping(true);
+      const response = await productApi.shippingMethods.update(method.id, {
+        is_active: !method.is_active
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      toast({
+        title: "Éxito",
+        description: `Método de envío ${method.is_active ? 'desactivado' : 'activado'} correctamente`,
+      });
+
+      await loadShippingDetails();
+    } catch (error) {
+      console.error('Error toggling shipping method:', error);
+      toast({
+        title: "Error",
+        description: "Error al cambiar el estado del método de envío",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingShipping(false);
+    }
+  };
+
   const handleCreateNew = () => {
     setIsCreating(true);
     resetForm();
@@ -447,7 +612,7 @@ export default function VistaPrincipalAdminPage() {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="text-center space-y-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
               Gestión de Vista Principal
@@ -457,7 +622,7 @@ export default function VistaPrincipalAdminPage() {
             </p>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex justify-center gap-2">
             {isDatabaseMigrated && (
               <Button
                 variant="outline"
@@ -814,6 +979,196 @@ ALTER TABLE novedad RENAME TO vista_principal;
             )}
           </CardContent>
         </Card>
+
+        {/* Shipping Methods Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" />
+              Métodos de Envío
+            </CardTitle>
+            <CardDescription>
+              Gestiona los métodos de envío que se muestran en la página principal
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingShipping ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                Cargando métodos de envío...
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {shippingMethods.map((method) => (
+                    <Card key={method.id} className="border-l-4 border-l-blue-500">
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-medium">{method.title}</h4>
+                              <Badge variant={method.is_active ? "default" : "secondary"}>
+                                {method.is_active ? "Activo" : "Inactivo"}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {method.description}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              {method.icon_name && (
+                                <span>Icono: {method.icon_name}</span>
+                              )}
+                              <span>Orden: {method.display_order}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditShippingMethod(method)}
+                            >
+                              <Edit2 className="h-3 w-3 mr-1" />
+                              Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleShippingMethod(method)}
+                            >
+                              {method.is_active ? (
+                                <EyeOff className="h-3 w-3" />
+                              ) : (
+                                <Eye className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {shippingMethods.length === 0 && (
+                    <div className="text-center py-8">
+                      <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-semibold mb-2">No hay métodos de envío</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Agrega tu primer método de envío para comenzar.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end mt-6">
+                  <Button
+                    onClick={() => handleEditShippingMethod(null)}
+                    size="lg"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar Método de Envío
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Shipping Method Dialog */}
+        <Dialog open={isShippingDialogOpen} onOpenChange={setIsShippingDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingShippingMethod ? 'Editar Método de Envío' : 'Crear Método de Envío'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingShippingMethod
+                  ? 'Modifica la información del método de envío.'
+                  : 'Completa la información para crear un nuevo método de envío.'
+                }
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="shipping_title">Título *</Label>
+                <Input
+                  id="shipping_title"
+                  value={shippingMethodForm.title}
+                  onChange={(e) => setShippingMethodForm({ ...shippingMethodForm, title: e.target.value })}
+                  placeholder="Ej: Envíos Nacionales"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="shipping_description">Descripción *</Label>
+                <Textarea
+                  id="shipping_description"
+                  value={shippingMethodForm.description}
+                  onChange={(e) => setShippingMethodForm({ ...shippingMethodForm, description: e.target.value })}
+                  placeholder="Describe el método de envío..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shipping_icon">Nombre del Icono (Opcional)</Label>
+                  <Input
+                    id="shipping_icon"
+                    value={shippingMethodForm.icon_name}
+                    onChange={(e) => setShippingMethodForm({ ...shippingMethodForm, icon_name: e.target.value })}
+                    placeholder="Ej: Truck, MapPin, Shield"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Nombre del icono de Lucide React
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="shipping_order">Orden de Visualización</Label>
+                  <Input
+                    id="shipping_order"
+                    type="number"
+                    min="0"
+                    value={shippingMethodForm.display_order}
+                    onChange={(e) => setShippingMethodForm({ ...shippingMethodForm, display_order: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="shipping_active"
+                  checked={shippingMethodForm.is_active}
+                  onChange={(e) => setShippingMethodForm({ ...shippingMethodForm, is_active: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="shipping_active">Método activo (visible en la página)</Label>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsShippingDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveShippingMethod}
+                disabled={isSavingShipping}
+              >
+                {isSavingShipping ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {editingShippingMethod ? 'Actualizar' : 'Crear'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -1489,3 +1489,37 @@ export interface AboutContentUpdate {
   is_active?: boolean;
   display_order?: number;
 }
+
+// =====================================================
+// SHIPPING METHODS TYPES
+// =====================================================
+
+export interface ShippingMethod {
+  id: string;
+  title: string;
+  description: string;
+  icon_name?: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+export interface ShippingMethodInsert {
+  title: string;
+  description: string;
+  icon_name?: string;
+  is_active?: boolean;
+  display_order?: number;
+  created_by?: string;
+}
+
+export interface ShippingMethodUpdate {
+  title?: string;
+  description?: string;
+  icon_name?: string;
+  is_active?: boolean;
+  display_order?: number;
+  updated_at?: string;
+}

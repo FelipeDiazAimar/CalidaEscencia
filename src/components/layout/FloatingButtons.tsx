@@ -24,7 +24,7 @@ export default function FloatingButtons() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild size="icon" className="rounded-full h-14 w-14 bg-[#25d366] hover:bg-[#25d366]/90 shadow-lg">
-              <Link href="#" aria-label="WhatsApp">
+              <Link href="https://wa.me/5493564366523" aria-label="WhatsApp">
                 <WhatsAppIcon className="h-7 w-7 text-white" />
               </Link>
             </Button>

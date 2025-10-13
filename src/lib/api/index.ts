@@ -68,6 +68,9 @@ export type {
   UserRole,
   PaymentMethod,
   PaymentStatus,
+  ShippingMethod,
+  ShippingMethodInsert,
+  ShippingMethodUpdate,
 } from '@/types/database';
 
 // Stock order types
