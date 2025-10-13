@@ -136,6 +136,7 @@ export default function AboutPage() {
                 width={600}
                 height={800}
                 className="rounded-lg shadow-lg object-cover aspect-[3/4] w-full"
+                quality={100}
               />
             )}
             {!missionSection?.image_url && (
@@ -145,6 +146,7 @@ export default function AboutPage() {
                 width={600}
                 height={800}
                 className="rounded-lg shadow-lg object-cover aspect-[3/4] w-full"
+                quality={100}
               />
             )}
           </div>
@@ -182,6 +184,8 @@ export default function AboutPage() {
             alt="Mapa de envíos"
             fill
             className="object-cover"
+            quality={100}
+            sizes="100vw"
           />
           <div className="absolute inset-0 bg-black/70" />
           <div className="container relative text-white text-center z-10 px-4 md:px-6">
@@ -222,6 +226,9 @@ export default function AboutPage() {
             alt="Métodos de pago seguros"
             fill
             className="object-cover"
+            quality={100}
+            sizes="100vw"
+            priority
           />
           <div className="absolute inset-0 bg-primary/85" />
           <div className="container relative text-primary-foreground text-center z-10 px-4 md:px-6">
@@ -249,6 +256,8 @@ export default function AboutPage() {
             alt="Empaque de regalo"
             fill
             className="object-cover"
+            quality={100}
+            sizes="100vw"
           />
           <div className="absolute inset-0 bg-black/70" />
           <div className="container relative text-white text-center z-10 px-4 md:px-6">

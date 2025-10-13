@@ -154,7 +154,9 @@ export function FiltersBarClient({ categories, materials, currentCategory, curre
               onClick={() => {
                 setMinVal(globalMin);
                 setMaxVal(globalMax);
-                pushUpdated({ min: globalMin, max: globalMax, category: pendingCategory, material: pendingMaterial, resetPage: true });
+                setPendingCategory('');
+                setPendingMaterial('');
+                pushUpdated({ min: globalMin, max: globalMax, category: '', material: '', resetPage: true });
               }}
               className="ml-auto text-[11px] px-2 py-1 rounded-md border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             >Limpiar filtros</button>
