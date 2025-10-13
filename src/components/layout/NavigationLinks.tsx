@@ -70,7 +70,7 @@ export default function Header() {
               <SheetDescription className="sr-only">Lista de enlaces de navegación principales del sitio.</SheetDescription>
               <Link href="/" className="flex items-center" onClick={() => setSheetOpen(false)}>
                 <span className="font-bold font-headline text-xl tracking-wide">
-                  Algo Bonito SV
+                  Calida Escencia
                 </span>
               </Link>
               <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
@@ -92,7 +92,7 @@ export default function Header() {
           </Sheet>
            <Link href="/" className="flex items-center space-x-2">
             <span className="font-bold font-headline text-lg tracking-wide">
-              Algo Bonito SV
+              Calida Escencia
             </span>
           </Link>
         </div>
@@ -101,7 +101,7 @@ export default function Header() {
         <div className="hidden md:flex">
           <Link href="/" className="flex items-center space-x-2">
             <span className="font-bold font-headline text-xl tracking-wide">
-              Algo Bonito SV
+              Calida Escencia
             </span>
           </Link>
         </div>

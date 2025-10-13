@@ -214,7 +214,7 @@ export default function Header() {
                   {/* Header with logo */}
                   <div className="flex items-center justify-center p-4 border-b relative">
                     <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
-                      <img src="/logo.png" alt="Algo Bonito SV" className="h-8" />
+                      <img src="/logo.png" alt="Calida Escencia" className="h-8" />
                     </Link>
                     <Button 
                       variant="ghost" 
@@ -353,14 +353,14 @@ export default function Header() {
           {/* Desktop: Logo - centered */}
           <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
             <Link href="/" className="flex items-center">
-              <img src="/logo.png" alt="Algo Bonito SV" className="h-12" />
+              <img src="/logo.png" alt="Calida Escencia" className="h-12" />
             </Link>
           </div>
 
           {/* Absolute centered mobile logo */}
           <div className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
             <Link href="/" className="flex items-center">
-              <img src="/logo.png" alt="Algo Bonito SV" className="h-10" />
+              <img src="/logo.png" alt="Calida Escencia" className="h-10" />
             </Link>
           </div>
 

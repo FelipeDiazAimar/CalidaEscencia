@@ -1,4 +1,4 @@
-# **App Name**: Algo Bonito SV
+# **App Name**: Calida Escencia
 
 ## Core Features:
 

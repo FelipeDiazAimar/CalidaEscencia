@@ -6,9 +6,11 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import AddToCartButton from "./add-to-cart-button";
-import { CreditCard, Truck, Shield, RefreshCw, Gem, Leaf, Sparkles, ShieldCheck } from 'lucide-react';
+import { CreditCard, Truck, Shield, RefreshCw, Leaf, Sparkles, ShieldCheck } from 'lucide-react';
 import { productAttributesApi } from '@/lib/api/productAttributes';
-import type { ProductAttribute } from '@/types/database';
+import { productApi } from '@/lib/api';
+import type { ProductAttribute, ShippingMethod } from '@/types/database';
+import * as LucideIcons from 'lucide-react';
 
 interface Product {
   name: string;
@@ -341,7 +343,7 @@ export default function ProductGallery({
           {/* Product Description */}
           {product.description && (
             <div className="prose prose-gray max-w-none">
-              <p className="text-muted-foreground text-base leading-relaxed">{product.description}</p>
+              <p className="text-muted-foreground text-base leading-relaxed mb-6">{product.description}</p>
             </div>
           )}
         </div>
@@ -411,7 +413,7 @@ export default function ProductGallery({
           <div className="hidden md:grid gap-4 md:grid-cols-3">
             <Feature icon={CreditCard} title="Pagos" desc="Tarjeta, transferencia o contra entrega." />
             <Feature icon={Truck} title="Envíos" desc="Local, nacional y retiro en tienda." />
-            <Feature icon={Shield} title="Garantía" desc="Piezas revisadas y soporte personalizado." />
+            <Feature icon={Shield} title="Garantía" desc="Productos revisados y soporte personalizado." />
           </div>
 
           {/* Beneficios - Enhanced Design */}
@@ -425,11 +427,11 @@ export default function ProductGallery({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Gem className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Materiales Premium</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Acabados de alta calidad</p>
+                  <p className="font-medium text-foreground text-sm">Materiales Naturales</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Ingredientes de calidad premium</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -437,8 +439,8 @@ export default function ProductGallery({
                   <Leaf className="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Hipoalergénico</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Ideal para uso diario</p>
+                  <p className="font-medium text-foreground text-sm">Aromas Puros</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Esencias naturales y seguras</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -447,7 +449,7 @@ export default function ProductGallery({
                 </div>
                 <div>
                   <p className="font-medium text-foreground text-sm">Listo para Regalo</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Presentación elegante</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">Empaque elegante y sofisticado</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -455,8 +457,8 @@ export default function ProductGallery({
                   <RefreshCw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Garantía de Cambio</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">7 días sin uso</p>
+                  <p className="font-medium text-foreground text-sm">Garantía de Satisfacción</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">7 días de cambio</p>
                 </div>
               </div>
             </div>
@@ -482,12 +484,70 @@ function ProductDetailsSection() {
     { icon: Truck, text: "Contra entrega" }
   ];
 
+  // Shipping methods state
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
+  const [loadingShipping, setLoadingShipping] = useState(true);
+
+  // Returns policy state
+  const [returnsPolicy, setReturnsPolicy] = useState<{
+    title: string;
+    subtitle: string;
+    rules: string[];
+  } | null>(null);
+  const [loadingReturns, setLoadingReturns] = useState(true);
+
+  useEffect(() => {
+    const loadShippingMethods = async () => {
+      try {
+        const response = await productApi.shippingMethods.getAll();
+        if (response.success && response.data) {
+          setShippingMethods(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading shipping methods:', error);
+      } finally {
+        setLoadingShipping(false);
+      }
+    };
+
+    const loadReturnsPolicy = async () => {
+      try {
+        const response = await productApi.aboutContent.getBySection('returns');
+        if (response.success && response.data) {
+          const extraData = response.data.extra_data;
+          const rules = Array.isArray(extraData?.policy?.rules)
+            ? extraData.policy.rules.filter((rule: unknown): rule is string => typeof rule === 'string')
+            : [];
+          
+          setReturnsPolicy({
+            title: extraData?.policy?.title || response.data.title || 'Política de Cambios y Devoluciones',
+            subtitle: response.data.subtitle || '',
+            rules: rules
+          });
+        }
+      } catch (error) {
+        console.error('Error loading returns policy:', error);
+      } finally {
+        setLoadingReturns(false);
+      }
+    };
+
+    loadShippingMethods();
+    loadReturnsPolicy();
+  }, []);
+
+  const getIcon = (iconName?: string) => {
+    if (!iconName) return Truck;
+    const IconComponent = (LucideIcons as any)[iconName];
+    return IconComponent || Truck;
+  };
+
   return (
     <div>
       {/* Payment Methods - Enhanced */}
       <div className="mb-12 mt-8">
         <div className="text-center md:text-left mb-6">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Opciones de Pago Seguras</h3>
+          <h3 className="text-lg font-semibold text-foreground" style={{marginTop: '25px'}}>Opciones de Pago Seguras</h3>
           <p className="text-sm text-muted-foreground">Elige la forma de pago que más te convenga</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -514,10 +574,33 @@ function ProductDetailsSection() {
         <Accordion type="single" collapsible>
           <AccordionItem value="shipping">
             <AccordionTrigger><Truck className="mr-2 h-5 w-5"/> Envíos y Devoluciones</AccordionTrigger>
-            <AccordionContent className="space-y-2 text-muted-foreground">
-              <p><strong>Envíos Nacionales:</strong> 2-3 días hábiles. Tarifa de $3.50.</p>
-              <p><strong>Envíos Internacionales:</strong> Contáctanos para cotizar.</p>
-              <p><strong>Devoluciones:</strong> Aceptamos devoluciones hasta 7 días después de la entrega. El producto debe estar sin usar y en su empaque original.</p>
+            <AccordionContent className="space-y-4 text-muted-foreground">
+              {loadingShipping ? (
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted animate-pulse rounded"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2"></div>
+                </div>
+              ) : shippingMethods.length > 0 ? (
+                shippingMethods.map((method) => {
+                  const IconComponent = getIcon(method.icon_name);
+                  return (
+                    <div key={method.id} className="flex items-start space-x-3">
+                      <IconComponent className="h-4 w-4 mt-0.5 text-primary-foreground/60 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-foreground text-sm mb-1">{method.title}</p>
+                        <p className="text-xs leading-relaxed">{method.description}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  <p><strong>Envíos Nacionales:</strong> 2-3 días hábiles. Tarifa de $3.50.</p>
+                  <p><strong>Envíos Internacionales:</strong> Contáctanos para cotizar.</p>
+                  <p><strong>Devoluciones:</strong> Aceptamos devoluciones hasta 7 días después de la entrega. El producto debe estar sin usar y en su empaque original.</p>
+                </>
+              )}
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="warranty">
@@ -526,12 +609,33 @@ function ProductDetailsSection() {
               <p>Ofrecemos 30 días de garantía por defectos de fabricación. No cubre desgaste normal, pérdida o daño por mal uso.</p>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="care">
-            <AccordionTrigger><Gem className="mr-2 h-5 w-5"/> Cuidado de la Joya</AccordionTrigger>
-            <AccordionContent className="space-y-2 text-muted-foreground">
-              <li>Guarda tus piezas individualmente para evitar que se rayen.</li>
-              <li>Evita el contacto con perfumes, cremas y productos de limpieza.</li>
-              <li>Límpialas suavemente con un paño seco y suave.</li>
+          <AccordionItem value="returns">
+            <AccordionTrigger><RefreshCw className="mr-2 h-5 w-5"/> Política de Devoluciones</AccordionTrigger>
+            <AccordionContent className="space-y-3 text-muted-foreground">
+              {loadingReturns ? (
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted animate-pulse rounded"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2"></div>
+                </div>
+              ) : returnsPolicy ? (
+                <>
+                  {returnsPolicy.subtitle && (
+                    <p className="text-sm mb-3">{returnsPolicy.subtitle}</p>
+                  )}
+                  <div className="space-y-2">
+                    {returnsPolicy.rules.map((rule, index) => (
+                      <p key={index} className="text-sm">• {rule}</p>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>Puedes solicitar un cambio o devolución hasta 7 días después de recibir tu pedido.</p>
+                  <p>El producto debe estar en perfectas condiciones, sin uso y en su empaque original.</p>
+                  <p>Los costos de envío para devoluciones son cubiertos por el cliente, excepto en casos de defectos de fábrica.</p>
+                </>
+              )}
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -540,18 +644,41 @@ function ProductDetailsSection() {
       {/* Details Tabs for Desktop */}
       <div className="hidden md:block mt-16">
         <Tabs defaultValue="shipping">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="shipping"><Truck className="mr-2 h-5 w-5"/> Envíos y Devoluciones</TabsTrigger>
-            <TabsTrigger value="warranty"><ShieldCheck className="mr-2 h-5 w-5"/> Garantía</TabsTrigger>
-            <TabsTrigger value="care"><Gem className="mr-2 h-5 w-5"/> Cuidado de la Joya</TabsTrigger>
+          <TabsList className="flex w-full h-auto p-1">
+            <TabsTrigger value="shipping" className="flex-1"><Truck className="mr-2 h-4 w-4"/> Envíos y Devoluciones</TabsTrigger>
+            <TabsTrigger value="warranty" className="flex-1"><ShieldCheck className="mr-2 h-4 w-4"/> Garantía</TabsTrigger>
+            <TabsTrigger value="returns" className="flex-1"><RefreshCw className="mr-2 h-4 w-4"/> Política de Devoluciones</TabsTrigger>
           </TabsList>
           <TabsContent value="shipping" className="py-6 px-4">
-            <h3 className="font-bold text-lg mb-2">Detalles de Envío</h3>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li><strong>Envíos Nacionales (El Salvador):</strong> Tiempo de entrega de 2-3 días hábiles. Costo estándar de $3.50.</li>
-              <li><strong>Envíos Internacionales:</strong> Contáctanos por WhatsApp para cotizar envíos a cualquier parte del mundo.</li>
-              <li><strong>Empaque:</strong> Todas las joyas se envían en un empaque seguro y elegante, listas para regalar.</li>
-            </ul>
+            <h3 className="font-bold text-lg mb-4">Detalles de Envío</h3>
+            {loadingShipping ? (
+              <div className="space-y-3">
+                <div className="h-4 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
+                <div className="h-4 bg-muted animate-pulse rounded w-1/2"></div>
+              </div>
+            ) : shippingMethods.length > 0 ? (
+              <div className="space-y-4 mb-6">
+                {shippingMethods.map((method) => {
+                  const IconComponent = getIcon(method.icon_name);
+                  return (
+                    <div key={method.id} className="flex items-start space-x-3">
+                      <IconComponent className="h-5 w-5 mt-0.5 text-primary-foreground/60 flex-shrink-0" />
+                      <div>
+                        <h4 className="font-medium text-foreground mb-1">{method.title}</h4>
+                        <p className="text-muted-foreground text-sm leading-relaxed">{method.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground mb-6">
+                <li><strong>Envíos Nacionales (El Salvador):</strong> Tiempo de entrega de 2-3 días hábiles. Costo estándar de $3.50.</li>
+                <li><strong>Envíos Internacionales:</strong> Contáctanos por WhatsApp para cotizar envíos a cualquier parte del mundo.</li>
+                <li><strong>Empaque:</strong> Todos nuestros productos se envían en un empaque seguro y elegante, listos para regalar.</li>
+              </ul>
+            )}
             <Separator className="my-4"/>
             <h3 className="font-bold text-lg mb-2">Política de Devoluciones</h3>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground">
@@ -563,26 +690,43 @@ function ProductDetailsSection() {
           <TabsContent value="warranty" className="py-6 px-4">
             <h3 className="font-bold text-lg mb-2">Garantía de Calidad</h3>
             <p className="text-muted-foreground">
-              En Algo Bonito SV, nos enorgullecemos de la calidad de nuestras piezas. Ofrecemos una garantía de <strong>30 días</strong> a partir de la fecha de compra que cubre exclusivamente defectos de fabricación. Si encuentras algún problema con tu joya que no se deba al uso normal, contáctanos y con gusto la repararemos o reemplazaremos.
+              En Calida Escencia, nos enorgullecemos de la calidad de nuestros productos. Ofrecemos una garantía de <strong>30 días</strong> a partir de la fecha de compra que cubre exclusivamente defectos de fabricación. Si encuentras algún problema con tu producto que no se deba al uso normal, contáctanos y con gusto lo repararemos o reemplazaremos.
               <br/><br/>
               Esta garantía no cubre:
             </p>
             <ul className="list-disc list-inside space-y-2 text-muted-foreground mt-4">
               <li>Desgaste natural por el uso diario.</li>
-              <li>Daños causados por mal uso (rayones, golpes, contacto con químicos).</li>
-              <li>Pérdida de la pieza o de alguno de sus componentes.</li>
-              <li>Alteraciones o reparaciones no realizadas por nosotros.</li>
+              <li>Daños causados por mal uso o exposición a condiciones extremas.</li>
+              <li>Pérdida del producto o de alguno de sus componentes.</li>
+              <li>Alteraciones o modificaciones no realizadas por nosotros.</li>
             </ul>
           </TabsContent>
-          <TabsContent value="care" className="py-6 px-4">
-            <h3 className="font-bold text-lg mb-2">Cuida tu Tesoro</h3>
-            <p className="text-muted-foreground mb-4">Para que tus joyas luzcan siempre como el primer día, sigue estas recomendaciones:</p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li><strong>Almacenamiento:</strong> Guarda cada pieza por separado en un lugar seco y oscuro, preferiblemente en su bolsa o caja original, para evitar rayones y enredos.</li>
-              <li><strong>Evita Químicos:</strong> No expongas tus joyas a perfumes, cremas, lacas, o productos de limpieza. Póntelas siempre al final de tu rutina de belleza.</li>
-              <li><strong>Agua y Sudor:</strong> Quítate las joyas antes de bañarte, nadar, ir al gimnasio o realizar actividades que impliquen sudoración excesiva.</li>
-              <li><strong>Limpieza:</strong> Después de cada uso, límpialas suavemente con un paño de microfibra para eliminar restos de grasa o suciedad. Para una limpieza más profunda, usa agua tibia y jabón neutro, y sécalas completamente.</li>
-            </ul>
+          <TabsContent value="returns" className="py-6 px-4">
+            <h3 className="font-bold text-lg mb-4">{returnsPolicy?.title || 'Política de Cambios y Devoluciones'}</h3>
+            {loadingReturns ? (
+              <div className="space-y-3">
+                <div className="h-4 bg-muted animate-pulse rounded"></div>
+                <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
+                <div className="h-4 bg-muted animate-pulse rounded w-1/2"></div>
+              </div>
+            ) : returnsPolicy ? (
+              <>
+                {returnsPolicy.subtitle && (
+                  <p className="text-muted-foreground mb-4">{returnsPolicy.subtitle}</p>
+                )}
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+                  {returnsPolicy.rules.map((rule, index) => (
+                    <li key={index}>{rule}</li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+                <li>Puedes solicitar un cambio o devolución hasta 7 días después de recibir tu pedido.</li>
+                <li>El producto debe estar en perfectas condiciones, sin uso y en su empaque original.</li>
+                <li>Los costos de envío para devoluciones son cubiertos por el cliente, excepto en casos de defectos de fábrica.</li>
+              </ul>
+            )}
           </TabsContent>
         </Tabs>
       </div>

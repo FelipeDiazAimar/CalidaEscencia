@@ -6,7 +6,7 @@ export default function Footer() {
   return (
     <footer className="bg-[#e8d2c5]">
       <div className="container py-8">
-        <div className="mt-8 pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center text-sm text-[#9a7b68]">
+        <div className="pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center text-sm text-[#9a7b68]">
           <p>&copy; {new Date().getFullYear()} CalidaEscencia. Todos los derechos reservados.</p>
           <div className="flex items-center space-x-6 mt-4 md:mt-0">
             <Link href="#" aria-label="Instagram">

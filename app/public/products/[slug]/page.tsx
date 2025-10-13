@@ -74,7 +74,7 @@ async function RelatedProducts({ currentSlug }: { currentSlug: string }) {
     .slice(0, 4);
   
   return (
-    <div className="container pb-20">
+    <div className="container pb-20 mb-16">
   <Separator className="mb-10" />
   <h2 className="font-headline text-2xl md:text-3xl font-semibold tracking-tight mb-8 mt-12">También te puede gustar</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-4xl mx-auto">
