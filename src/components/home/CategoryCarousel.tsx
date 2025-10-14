@@ -168,10 +168,11 @@ export default function CategoryCarousel() {
           </div>
         ) : (
           // When many categories, use carousel
-          <Carousel
-            opts={{ align: "start", loop: true }}
-            className="w-full"
-          >
+          <div className="px-4 sm:px-8 lg:px-12">
+            <Carousel
+              opts={{ align: "start", loop: true }}
+              className="w-full"
+            >
             <CarouselContent>
               {categories.map((category) => (
                 <CarouselItem key={category.id} className="basis-1/4 sm:basis-1/4 md:basis-1/5 lg:basis-1/6 px-1 sm:px-2">
@@ -205,9 +206,8 @@ export default function CategoryCarousel() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious variant="ghost" className="top-[40%] -left-4 sm:-left-6" />
-            <CarouselNext variant="ghost" className="top-[40%] -right-4 sm:-right-6" />
           </Carousel>
+          </div>
         )}
       </div>
     </section>
