@@ -378,12 +378,7 @@ export default function ProductSalesModal({
         quantity: formData.quantity,
         unit_price: formData.selectedProduct.price,
         total_price: formData.selectedProduct.price * formData.quantity,
-        sale_date: new Date().toISOString(),
         attribute_id: formData.selectedAttribute && formData.selectedAttribute !== 'none' ? formData.selectedAttribute : undefined, // Include selected attribute if any
-        attribute_name: formData.selectedAttribute && formData.selectedAttribute !== 'none' ? 
-          filteredAttributes.find(attr => attr.id === formData.selectedAttribute)?.name : undefined,
-        attribute_value: formData.selectedAttribute && formData.selectedAttribute !== 'none' ? 
-          filteredAttributes.find(attr => attr.id === formData.selectedAttribute)?.value : undefined
       };
 
       const response = await productApi.productSales.create(saleData);

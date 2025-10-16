@@ -379,19 +379,13 @@ export default function OrdersPage() {
                             Venta Directa
                           </p>
                           <p className="text-sm text-green-600">
-                            {saleItem.quantity}x {product?.name || 'Producto desconocido'}
-                            {saleItem.attribute ? (
-                              <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                {saleItem.attribute.name}: {saleItem.attribute.value}
-                              </span>
-                            ) : (
-                              // Si no hay atributo pero el nombre contiene "|", mostrar la parte después como variante
-                              product?.name?.includes('|') && (
-                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                  {product.name.split('|')[1]?.trim() || 'Variante'}
-                                </span>
-                              )
-                            )}
+                            {saleItem.quantity}x {
+                              saleItem.attribute 
+                                ? `${product?.name?.split('|')[0]?.trim() || product?.name || 'Producto desconocido'} (${saleItem.attribute.name}: ${saleItem.attribute.value})`
+                                : product?.name?.includes('|') 
+                                  ? `${product.name.split('|')[0]?.trim()} (${product.name.split('|')[1]?.trim()})`
+                                  : product?.name || 'Producto desconocido'
+                            }
                           </p>
                           <p className="text-xs text-green-500">
                             {new Date(saleItem.created_at).toLocaleDateString()}

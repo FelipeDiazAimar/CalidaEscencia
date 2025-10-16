@@ -2026,6 +2026,8 @@ export const productSalesApi = {
         total_price: totalPrice,
         unit_cost: saleData.unit_cost || 0,
         total_cost: saleData.total_cost || 0,
+        attribute_id: saleData.attribute_id || null,
+        variant_data: saleData.variant_data || null,
       };
 
       console.log('🔍 Attempting to insert sale data:', saleToInsert);
