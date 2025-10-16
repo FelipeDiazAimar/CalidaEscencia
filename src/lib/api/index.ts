@@ -8,6 +8,9 @@ export { api as productApi, vistaPrincipalApi } from './products';
 // Product Attributes APIs
 export { productAttributesApi } from './productAttributes';
 
+// Product Variant Inventory APIs
+export { productVariantInventoryApi } from './productVariantInventory';
+
 // Finance APIs
 export { financeApi } from './finances';
 

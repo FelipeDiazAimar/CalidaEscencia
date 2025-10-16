@@ -34,6 +34,12 @@ import type {
   ProductInventory,
   ProductInventoryInsert,
   ProductInventoryUpdate,
+  ProductAttributeCombination,
+  ProductAttributeCombinationInsert,
+  ProductAttributeCombinationUpdate,
+  ProductVariantInventory,
+  ProductVariantInventoryInsert,
+  ProductVariantInventoryUpdate,
   StockMovement,
   StockMovementInsert,
   SaleItem,
@@ -692,13 +698,41 @@ export const productsApi = {
         return createResponse([], null);
       }
       
-      const { data, error } = await supabase!
+      // Get products
+      const { data: products, error: productsError } = await supabase!
         .from('products')
         .select('*')
         .order('name');
 
-      if (error) throw error;
-      return createResponse(data || [], null);
+      if (productsError) throw productsError;
+
+      // Get attribute combinations for all products
+      const { data: combinations, error: combinationsError } = await supabase!
+        .from('product_attribute_combinations')
+        .select('product_id, attribute_id');
+
+      if (combinationsError) {
+        console.warn('Could not load attribute combinations:', combinationsError);
+      }
+
+      // Group combinations by product_id
+      const combinationsByProduct: Record<string, string[]> = {};
+      if (combinations) {
+        combinations.forEach(combo => {
+          if (!combinationsByProduct[combo.product_id]) {
+            combinationsByProduct[combo.product_id] = [];
+          }
+          combinationsByProduct[combo.product_id].push(combo.attribute_id);
+        });
+      }
+
+      // Add attribute_ids to products
+      const productsWithAttributes = (products || []).map(product => ({
+        ...product,
+        attribute_ids: combinationsByProduct[product.id] || []
+      }));
+
+      return createResponse(productsWithAttributes, null);
     } catch (error) {
       return createResponse([] as Product[], handleError(error));
     }
@@ -977,20 +1011,45 @@ export const productsApi = {
           is_active: product.is_active ?? true,
           is_featured: product.is_featured ?? false,
           is_new: product.is_new ?? false,
+          attribute_ids: product.attribute_ids || [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
         return createResponse(mockProduct, null);
       }
 
+      // Extract attribute_ids before inserting into products table
+      const { attribute_ids, ...productData } = product;
+
       const { data, error } = await supabase!
         .from('products')
-        .insert([product] as any)
+        .insert([productData] as any)
         .select()
         .single();
 
       if (error) throw error;
-      return createResponse(data, null);
+
+      // Create attribute combinations if provided
+      if (attribute_ids && attribute_ids.length > 0) {
+        const combinations = attribute_ids.map(attributeId => ({
+          product_id: data.id,
+          attribute_id: attributeId
+        }));
+
+        const { error: comboError } = await supabase!
+          .from('product_attribute_combinations')
+          .insert(combinations);
+
+        if (comboError) {
+          console.warn('Could not create attribute combinations:', comboError);
+        }
+      }
+
+      // Return product with attribute_ids
+      return createResponse({
+        ...data,
+        attribute_ids: attribute_ids || []
+      }, null);
     } catch (error) {
       return createResponse(null, handleError(error));
     }
@@ -1017,21 +1076,55 @@ export const productsApi = {
           is_active: updates.is_active ?? true,
           is_featured: updates.is_featured ?? false,
           is_new: updates.is_new ?? false,
+          attribute_ids: updates.attribute_ids || [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
         return createResponse(mockProduct, null);
       }
 
+      // Extract attribute_ids before updating products table
+      const { attribute_ids, ...productUpdates } = updates;
+
       const { data, error } = await supabase!
         .from('products')
-        .update(updates as any)
+        .update(productUpdates as any)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
-      return createResponse(data, null);
+
+      // Update attribute combinations if provided
+      if (attribute_ids !== undefined) {
+        // Delete existing combinations
+        await supabase!
+          .from('product_attribute_combinations')
+          .delete()
+          .eq('product_id', id);
+
+        // Create new combinations if any
+        if (attribute_ids.length > 0) {
+          const combinations = attribute_ids.map(attributeId => ({
+            product_id: id,
+            attribute_id: attributeId
+          }));
+
+          const { error: comboError } = await supabase!
+            .from('product_attribute_combinations')
+            .insert(combinations);
+
+          if (comboError) {
+            console.warn('Could not update attribute combinations:', comboError);
+          }
+        }
+      }
+
+      // Return product with attribute_ids
+      return createResponse({
+        ...data,
+        attribute_ids: attribute_ids !== undefined ? attribute_ids : []
+      }, null);
     } catch (error) {
       return createResponse(null, handleError(error));
     }
@@ -1064,6 +1157,16 @@ export const productsApi = {
       }
 
       console.log('🗑️ ProductsAPI.delete: Deleting product from database...');
+      // Eliminar las combinaciones de atributos primero
+      const { error: comboDeleteError } = await (supabase! as any)
+        .from('product_attribute_combinations')
+        .delete()
+        .eq('product_id', id);
+
+      if (comboDeleteError) {
+        console.warn('⚠️ ProductsAPI.delete: Could not delete attribute combinations:', comboDeleteError);
+      }
+
       // Eliminar el producto de la base de datos
       const { error } = await (supabase! as any)
         .from('products')
@@ -1258,6 +1361,53 @@ export const inventoryApi = {
       return createResponse(data, null);
     } catch (error) {
       return createResponse(null, handleError(error));
+    }
+  },
+
+  // Get products with low stock
+  async getLowStockProducts(threshold: number = 10): Promise<ApiResponse<ProductWithDetails[]>> {
+    try {
+      // First get product variant inventory with low stock
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('product_variant_inventory')
+        .select('product_id, quantity, variant_data')
+        .gt('quantity', 0)
+        .lte('quantity', threshold)
+        .eq('is_active', true);
+
+      if (inventoryError) throw inventoryError;
+
+      if (!inventoryData || inventoryData.length === 0) {
+        return createResponse([], null);
+      }
+
+      // Get product IDs
+      const productIds = inventoryData.map(item => item.product_id);
+
+      // Get products that are active and in our inventory list
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', productIds)
+        .eq('is_active', true);
+
+      if (productsError) throw productsError;
+
+      // Combine products with their inventory data
+      const productsWithInventory = (productsData || []).map(product => {
+        const inventory = inventoryData.find(inv => inv.product_id === product.id);
+        return {
+          ...product,
+          inventory: inventory ? { 
+            quantity: inventory.quantity,
+            variant_data: inventory.variant_data 
+          } : null
+        } as ProductWithDetails;
+      });
+
+      return createResponse(productsWithInventory, null);
+    } catch (error) {
+      return createResponse([] as ProductWithDetails[], handleError(error));
     }
   },
 };
@@ -1749,13 +1899,37 @@ export const productSalesApi = {
         return createResponse([], null);
       }
 
-      const { data, error } = await supabase!
+      // Load sale items first
+      const { data: saleItems, error: saleError } = await supabase!
         .from('sale_items')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return createResponse(data as SaleItem[] || [], null);
+      if (saleError) throw saleError;
+
+      const items: SaleItem[] = (saleItems || []) as SaleItem[];
+
+      // If no items or none have attribute_id, return early
+      const attributeIds = Array.from(new Set(items.filter(i => i.attribute_id).map(i => String(i.attribute_id))));
+      if (attributeIds.length === 0) {
+        return createResponse(items, null);
+      }
+
+      // Batch fetch attributes and map them by id
+      const { data: attrsData, error: attrsError } = await supabase!
+        .from('product_attributes')
+        .select('*')
+        .in('id', attributeIds);
+
+      if (attrsError) throw attrsError;
+
+      const attrsById: Record<string, any> = {};
+      (attrsData || []).forEach((a: any) => { attrsById[a.id] = a; });
+
+      // Attach attribute object to each sale item when present
+      const itemsWithAttr = items.map(i => ({ ...i, attribute: i.attribute_id ? attrsById[String(i.attribute_id)] : undefined }));
+
+      return createResponse(itemsWithAttr as SaleItem[] || [], null);
     } catch (error) {
       return createResponse([] as SaleItem[], handleError(error));
     }
@@ -1769,15 +1943,33 @@ export const productSalesApi = {
         return createResponse([], null);
       }
 
-      const { data, error } = await supabase!
+      const { data: saleItems, error: saleError } = await supabase!
         .from('sale_items')
         .select('*')
         .gte('created_at', startDate)
         .lte('created_at', endDate)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return createResponse(data as SaleItem[] || [], null);
+      if (saleError) throw saleError;
+
+      const items: SaleItem[] = (saleItems || []) as SaleItem[];
+      const attributeIds = Array.from(new Set(items.filter(i => i.attribute_id).map(i => String(i.attribute_id))));
+      if (attributeIds.length === 0) {
+        return createResponse(items, null);
+      }
+
+      const { data: attrsData, error: attrsError } = await supabase!
+        .from('product_attributes')
+        .select('*')
+        .in('id', attributeIds);
+
+      if (attrsError) throw attrsError;
+
+      const attrsById: Record<string, any> = {};
+      (attrsData || []).forEach((a: any) => { attrsById[a.id] = a; });
+
+      const itemsWithAttr = items.map(i => ({ ...i, attribute: i.attribute_id ? attrsById[String(i.attribute_id)] : undefined }));
+      return createResponse(itemsWithAttr as SaleItem[] || [], null);
     } catch (error) {
       return createResponse([] as SaleItem[], handleError(error));
     }
@@ -3257,6 +3449,142 @@ export const shippingMethodsApi = {
   },
 };
 
+// Product Attribute Combinations API
+const productAttributeCombinationsApi = {
+  // Get all attribute combinations for a product
+  async getByProduct(productId: string): Promise<ApiResponse<ProductAttributeCombination[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('product_attribute_combinations')
+        .select('*')
+        .eq('product_id', productId);
+
+      if (error) throw error;
+      return createResponse(data || [], null);
+    } catch (error) {
+      return createResponse([], handleError(error));
+    }
+  },
+
+  // Add attribute to product
+  async create(data: ProductAttributeCombinationInsert): Promise<ApiResponse<ProductAttributeCombination | null>> {
+    try {
+      const { data: result, error } = await supabase
+        .from('product_attribute_combinations')
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return createResponse(result, null);
+    } catch (error) {
+      return createResponse(null, handleError(error));
+    }
+  },
+
+  // Remove attribute from product
+  async delete(id: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await supabase
+        .from('product_attribute_combinations')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return createResponse(true, null);
+    } catch (error) {
+      return createResponse(false, handleError(error));
+    }
+  },
+};
+
+// Product Variant Inventory API
+const productVariantInventoryApi = {
+  // Get all variants for a product
+  async getByProduct(productId: string): Promise<ApiResponse<ProductVariantInventory[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('product_variant_inventory')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('is_active', true)
+        .order('created_at');
+
+      if (error) throw error;
+      return createResponse(data || [], null);
+    } catch (error) {
+      return createResponse([], handleError(error));
+    }
+  },
+
+  // Create variant inventory
+  async create(data: ProductVariantInventoryInsert): Promise<ApiResponse<ProductVariantInventory | null>> {
+    try {
+      const { data: result, error } = await supabase
+        .from('product_variant_inventory')
+        .insert(data)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return createResponse(result, null);
+    } catch (error) {
+      return createResponse(null, handleError(error));
+    }
+  },
+
+  // Update variant inventory
+  async update(id: string, updates: ProductVariantInventoryUpdate): Promise<ApiResponse<ProductVariantInventory | null>> {
+    try {
+      const { data, error } = await supabase
+        .from('product_variant_inventory')
+        .update(updates as any)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return createResponse(data, null);
+    } catch (error) {
+      return createResponse(null, handleError(error));
+    }
+  },
+
+  // Delete variant inventory
+  async delete(id: string): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await supabase
+        .from('product_variant_inventory')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return createResponse(true, null);
+    } catch (error) {
+      return createResponse(false, handleError(error));
+    }
+  },
+
+  // Update stock for variant
+  async updateStock(id: string, quantity: number, reservedQuantity: number = 0): Promise<ApiResponse<boolean>> {
+    try {
+      const { error } = await supabase
+        .from('product_variant_inventory')
+        .update({
+          quantity,
+          reserved_quantity: reservedQuantity,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      return createResponse(true, null);
+    } catch (error) {
+      return createResponse(false, handleError(error));
+    }
+  },
+};
+
 export const api = {
   categories: categoriesApi,
   subcategories: subcategoriesApi,
@@ -3275,4 +3603,6 @@ export const api = {
   materialsContent: materialsContentApi,
   aboutContent: aboutContentApi,
   shippingMethods: shippingMethodsApi,
+  productAttributeCombinations: productAttributeCombinationsApi,
+  productVariantInventory: productVariantInventoryApi,
 };

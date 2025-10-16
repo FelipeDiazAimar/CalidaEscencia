@@ -295,6 +295,56 @@ export interface ProductAttributeUpdate {
   sort_order?: number;
 }
 
+export interface ProductAttributeCombination {
+  id: string;
+  product_id: string;
+  attribute_id: string;
+  created_at: string;
+}
+
+export interface ProductAttributeCombinationInsert {
+  product_id: string;
+  attribute_id: string;
+}
+
+export interface ProductAttributeCombinationUpdate {
+  product_id?: string;
+  attribute_id?: string;
+}
+
+export interface ProductVariantInventory {
+  id: string;
+  product_id: string;
+  variant_data: Record<string, any>; // JSONB data for attribute combinations
+  sku?: string;
+  quantity: number;
+  reserved_quantity: number;
+  price_modifier: number;
+  is_active: boolean;
+  last_updated: string;
+  created_at: string;
+}
+
+export interface ProductVariantInventoryInsert {
+  product_id: string;
+  variant_data: Record<string, any>;
+  sku?: string;
+  quantity?: number;
+  reserved_quantity?: number;
+  price_modifier?: number;
+  is_active?: boolean;
+}
+
+export interface ProductVariantInventoryUpdate {
+  product_id?: string;
+  variant_data?: Record<string, any>;
+  sku?: string;
+  quantity?: number;
+  reserved_quantity?: number;
+  price_modifier?: number;
+  is_active?: boolean;
+}
+
 export interface Model {
   id: string;
   name: string;
@@ -385,7 +435,6 @@ export interface Product {
   description: string | null;
   category_id: string | null;
   subcategory_id: string | null;
-  attribute_id: string | null;
   model_id: string | null;
   name_id: string | null;
   cost: number;
@@ -397,6 +446,7 @@ export interface Product {
   is_featured: boolean;
   is_new: boolean;
   stock: number;
+  attribute_ids?: string[]; // For form handling - not stored in products table
   created_at: string;
   updated_at: string;
 }
@@ -406,7 +456,6 @@ export interface ProductInsert {
   description?: string;
   category_id?: string;
   subcategory_id?: string;
-  attribute_id?: string;
   model_id?: string;
   name_id?: string;
   cost?: number;
@@ -418,6 +467,7 @@ export interface ProductInsert {
   is_featured?: boolean;
   is_new?: boolean;
   stock?: number;
+  attribute_ids?: string[]; // For form handling - not stored in products table
 }
 
 export interface ProductUpdate {
@@ -425,7 +475,6 @@ export interface ProductUpdate {
   description?: string;
   category_id?: string;
   subcategory_id?: string;
-  attribute_id?: string;
   model_id?: string;
   name_id?: string;
   cost?: number;
@@ -437,6 +486,7 @@ export interface ProductUpdate {
   is_featured?: boolean;
   is_new?: boolean;
   stock?: number;
+  attribute_ids?: string[]; // For form handling - not stored in products table
 }
 
 export interface ProductMaterial {
@@ -500,6 +550,7 @@ export interface ProductInventory {
   product_id: string;
   quantity: number;
   reserved_quantity: number;
+  variant_data?: Record<string, any>;
   last_updated: string;
 }
 
@@ -507,11 +558,13 @@ export interface ProductInventoryInsert {
   product_id: string;
   quantity?: number;
   reserved_quantity?: number;
+  variant_data?: Record<string, any>;
 }
 
 export interface ProductInventoryUpdate {
   quantity?: number;
   reserved_quantity?: number;
+  variant_data?: Record<string, any>;
 }
 
 // =====================================================
@@ -574,6 +627,9 @@ export interface SaleItem {
   unit_cost: number;
   total_price: number;
   total_cost: number;
+  attribute_id?: string | null;
+  variant_data?: Record<string, any>;
+  attribute?: ProductAttribute;
   created_at: string;
 }
 
@@ -585,6 +641,8 @@ export interface SaleItemInsert {
   unit_cost?: number;
   total_price: number;
   total_cost?: number;
+  attribute_id?: string;
+  variant_data?: Record<string, any>;
 }
 
 export interface SaleItemUpdate {
@@ -593,6 +651,8 @@ export interface SaleItemUpdate {
   unit_cost?: number;
   total_price?: number;
   total_cost?: number;
+  attribute_id?: string;
+  variant_data?: Record<string, any>;
 }
 
 // =====================================================

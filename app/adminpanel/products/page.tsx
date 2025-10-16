@@ -46,7 +46,7 @@ import StockOrderModal from '@/components/admin/StockOrderModal';
 import GeneralSalesModal from '@/components/admin/GeneralSalesModal';
 import ProductSalesModal from '@/components/admin/ProductSalesModal';
 import HistoryModal from '@/components/admin/HistoryModal';
-import { Plus, Edit, Trash2, Package, Loader2, ShoppingBag, Star, Sparkles, History, TrendingUp, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Loader2, ShoppingBag, Star, Sparkles, History, TrendingUp, Search, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { tempImageStore } from '@/lib/temp-image-store';
 import { TempImageUploader } from '@/lib/temp-image-uploader';
@@ -54,6 +54,7 @@ import { TempImageUploader } from '@/lib/temp-image-uploader';
 // Import API functions and types
 import { api } from '@/lib/api/products';
 import { productAttributesApi } from '@/lib/api/productAttributes';
+import { productVariantInventoryApi } from '@/lib/api/productVariantInventory';
 import type { 
   Product,
   ProductInsert,
@@ -67,7 +68,8 @@ interface ProductFormData {
   description: string;
   category_id: string;
   subcategory_id: string;
-  attribute_id: string;
+  attribute_ids: string[]; // Changed from attribute_id to attribute_ids (array)
+  attribute_stocks: Record<string, number>; // Stock por atributo individual
   cost: string;
   price: string;
   stock: string;
@@ -78,6 +80,19 @@ interface ProductFormData {
   is_featured: boolean;
   is_new: boolean;
 }
+
+const sumAttributeStockValues = (
+  attributeIds: string[],
+  attributeStocks: Record<string, number>
+): number => {
+  if (!attributeIds || attributeIds.length === 0) {
+    return 0;
+  }
+  return attributeIds.reduce((total, attributeId) => {
+    const stockValue = attributeStocks?.[attributeId];
+    return total + (typeof stockValue === 'number' && !Number.isNaN(stockValue) ? stockValue : 0);
+  }, 0);
+};
 
 export default function AdminProductsPage() {
   // Data state
@@ -103,6 +118,11 @@ export default function AdminProductsPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [historyDefaultTab, setHistoryDefaultTab] = useState<'products' | 'sales' | 'stock'>('products');
 
+  // Attribute selection for sales
+  const [isAttributeSelectionModalOpen, setIsAttributeSelectionModalOpen] = useState(false);
+  const [productForAttributeSelection, setProductForAttributeSelection] = useState<Product | null>(null);
+  const [selectedAttributeForSale, setSelectedAttributeForSale] = useState<string>('');
+
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -115,7 +135,8 @@ export default function AdminProductsPage() {
     description: '',
     category_id: '',
     subcategory_id: '',
-    attribute_id: '',
+    attribute_ids: [], // Changed from attribute_id to attribute_ids (array)
+    attribute_stocks: {}, // Stock por atributo individual
     cost: '',
     price: '',
     stock: '',
@@ -126,6 +147,10 @@ export default function AdminProductsPage() {
     is_featured: false,
     is_new: false
   });
+
+  const [variantStockSummary, setVariantStockSummary] = useState<{ variantTotal: number; productStock: number }>(
+    { variantTotal: 0, productStock: 0 }
+  );
 
   // Load initial data
   useEffect(() => {
@@ -189,16 +214,63 @@ export default function AdminProductsPage() {
     if (formData.subcategory_id) {
       const filtered = productAttributes.filter(attr => attr.subcategory_id === formData.subcategory_id && attr.is_active);
       setFilteredAttributes(filtered);
-      
-      // Reset attribute if it doesn't belong to selected subcategory
-      if (formData.attribute_id && !filtered.some(attr => attr.id === formData.attribute_id)) {
-        setFormData(prev => ({ ...prev, attribute_id: '' }));
+
+      // Reset attributes that don't belong to selected subcategory
+      const validAttributeIds = filtered.map(attr => attr.id);
+      const filteredAttributeIds = formData.attribute_ids.filter(id => validAttributeIds.includes(id));
+
+      if (filteredAttributeIds.length !== formData.attribute_ids.length) {
+        setFormData(prev => ({ ...prev, attribute_ids: filteredAttributeIds }));
       }
     } else {
       setFilteredAttributes([]);
-      setFormData(prev => ({ ...prev, attribute_id: '' }));
+      setFormData(prev => ({ ...prev, attribute_ids: [] }));
     }
   }, [formData.subcategory_id, productAttributes]);
+
+  // Calculate total stock from attributes when product has attributes
+  const totalAttributeStock = useMemo(() => {
+    if (formData.attribute_ids.length === 0) {
+      return 0;
+    }
+    return sumAttributeStockValues(formData.attribute_ids, formData.attribute_stocks);
+  }, [formData.attribute_ids, formData.attribute_stocks]);
+
+  // Update total stock when attribute stocks change
+  useEffect(() => {
+    if (formData.attribute_ids.length > 0) {
+      const newStockValue = totalAttributeStock.toString();
+      if (formData.stock !== newStockValue) {
+        setFormData(prev => ({
+          ...prev,
+          stock: newStockValue
+        }));
+      }
+    }
+  }, [totalAttributeStock, formData.attribute_ids.length, formData.stock]);
+
+  // Keep variant stock summary in sync for diagnostics and UI warnings
+  useEffect(() => {
+    if (formData.attribute_ids.length > 0) {
+      setVariantStockSummary(prev => ({
+        productStock: prev.productStock,
+        variantTotal: totalAttributeStock
+      }));
+    } else {
+      const parsedStock = Number.parseInt(formData.stock, 10) || 0;
+      setVariantStockSummary({ variantTotal: parsedStock, productStock: parsedStock });
+    }
+  }, [formData.attribute_ids.length, formData.stock, totalAttributeStock]);
+
+  // Filter attributes when product for attribute selection changes
+  useEffect(() => {
+    if (productForAttributeSelection && productForAttributeSelection.attribute_ids) {
+      const productAttrs = productAttributes.filter(attr =>
+        productForAttributeSelection.attribute_ids!.includes(attr.id) && attr.is_active
+      );
+      setFilteredAttributes(productAttrs);
+    }
+  }, [productForAttributeSelection, productAttributes]);
 
   // Filtered products based on search and filters
   const filteredProducts = useMemo(() => {
@@ -348,7 +420,7 @@ export default function AdminProductsPage() {
         description: formData.description.trim() || undefined,
         category_id: formData.category_id,
         subcategory_id: formData.subcategory_id || undefined,
-        attribute_id: formData.attribute_id || undefined,
+        attribute_ids: formData.attribute_ids,
         cost: parseFloat(formData.cost),
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock) || 0,
@@ -428,6 +500,83 @@ export default function AdminProductsPage() {
         return;
       }
 
+      // SAVE ATTRIBUTE STOCK TO product_variant_inventory
+      if (result.success && formData.attribute_ids.length > 0) {
+        console.log('📦 ProductsPage: Saving attribute stock to product_variant_inventory...');
+        console.log('📋 ProductsPage: Attribute IDs:', formData.attribute_ids);
+        console.log('📋 ProductsPage: Attribute stocks:', formData.attribute_stocks);
+        
+        try {
+          // Get all existing variants for this product
+          const existingVariants = await productVariantInventoryApi.getByProduct(result.data.id);
+          console.log('📡 ProductsPage: Existing variants response:', existingVariants);
+          
+          if (existingVariants.success) {
+            // Create or update variant inventory for each selected attribute
+            for (const attributeId of formData.attribute_ids) {
+              const attribute = filteredAttributes.find(attr => attr.id === attributeId);
+              if (!attribute) {
+                console.log(`⚠️ ProductsPage: Attribute not found: ${attributeId}`);
+                continue;
+              }
+
+              const attributeStock = formData.attribute_stocks?.[attributeId] || 0;
+              console.log(`📝 ProductsPage: Processing attribute ${attributeId} (${attribute.name}: ${attribute.value}) with stock ${attributeStock}`);
+              
+              // Check if variant already exists
+              const existingVariant = existingVariants.data?.find(variant => {
+                const variantData = variant.variant_data as any;
+                return variantData && variantData.attribute_id === attributeId;
+              });
+
+              const variantData = {
+                attribute_id: attributeId,
+                attribute_name: attribute.name,
+                attribute_value: attribute.value,
+                attribute_type: attribute.type
+              };
+              console.log('🔧 ProductsPage: Variant data to save:', variantData);
+
+              if (existingVariant) {
+                // Update existing variant
+                console.log(`🔄 ProductsPage: Updating variant ${existingVariant.id} with stock ${attributeStock}`);
+                const updateResult = await productVariantInventoryApi.update(existingVariant.id, {
+                  quantity: attributeStock,
+                  variant_data: variantData
+                });
+                console.log('📡 ProductsPage: Update result:', updateResult);
+              } else {
+                // Create new variant
+                console.log(`🆕 ProductsPage: Creating new variant for attribute ${attributeId} with stock ${attributeStock}`);
+                const createResult = await productVariantInventoryApi.create({
+                  product_id: result.data.id,
+                  variant_data: variantData,
+                  quantity: attributeStock,
+                  reserved_quantity: 0,
+                  is_active: true
+                });
+                console.log('📡 ProductsPage: Create result:', createResult);
+              }
+            }
+
+            // Remove variants for attributes that are no longer selected
+            const selectedAttributeIds = new Set(formData.attribute_ids);
+            for (const variant of existingVariants.data || []) {
+              const variantData = variant.variant_data as any;
+              if (variantData?.attribute_id && !selectedAttributeIds.has(variantData.attribute_id)) {
+                console.log(`🗑️ ProductsPage: Removing variant ${variant.id} for deselected attribute`);
+                await productVariantInventoryApi.delete(variant.id);
+              }
+            }
+          }
+          
+          console.log('✅ ProductsPage: Attribute stock saved successfully');
+        } catch (error) {
+          console.error('❌ ProductsPage: Error saving attribute stock:', error);
+          toast.error('Producto guardado, pero hubo un error al guardar el stock por atributos');
+        }
+      }
+
       // Reset form
       console.log('🧹 ProductsPage: Resetting form and closing dialog...');
       resetForm();
@@ -448,17 +597,82 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = async (product: Product) => {
+    console.log('🔄 handleEdit: Starting to edit product:', product.id);
+    console.log('📋 handleEdit: Product attribute_ids:', product.attribute_ids);
+    
     setEditingProduct(product);
+    
+    // Robust flow to populate attributes and their stocks
+    let attributeStocks: Record<string, number> = {};
+    const attributeIds = product.attribute_ids || [];
+
+    if (attributeIds.length === 0) {
+      console.log('ℹ️ handleEdit: Product has no attributes');
+    } else {
+      console.log('🔍 handleEdit: Ensuring filtered attributes are loaded for subcategory:', product.subcategory_id);
+      try {
+        // Ensure we have the current attributes for the product's subcategory so the UI renders correctly
+        const attrsRes = await productAttributesApi.getBySubcategory(product.subcategory_id || '');
+        if (attrsRes.success) {
+          setFilteredAttributes(attrsRes.data || []);
+          console.log('✅ handleEdit: Filtered attributes loaded:', (attrsRes.data || []).length);
+        } else {
+          console.warn('⚠️ handleEdit: Could not load filtered attributes:', attrsRes.error);
+        }
+      } catch (err) {
+        console.warn('⚠️ handleEdit: Error loading filtered attributes:', err);
+      }
+
+      // Initialize all selected attribute stocks to 0 to avoid undefined/NaN UI states
+      for (const attrId of attributeIds) {
+        attributeStocks[attrId] = 0;
+      }
+
+      // Load variant inventory and override initialized stocks
+      try {
+        const variantsResponse = await productVariantInventoryApi.getByProduct(product.id);
+        console.log('� handleEdit: Variants response:', variantsResponse);
+
+        if (variantsResponse.success && variantsResponse.data) {
+          for (const variant of variantsResponse.data) {
+            const variantData = variant.variant_data as any;
+            if (variantData?.attribute_id) {
+              // Only set if attribute is among the product's attribute_ids
+              if (attributeStocks.hasOwnProperty(variantData.attribute_id)) {
+                attributeStocks[variantData.attribute_id] = Number.isFinite(variant.quantity) ? variant.quantity : 0;
+                console.log(`✅ handleEdit: Loaded variant stock for ${variantData.attribute_id}: ${variant.quantity}`);
+              } else {
+                // if variant exists for an attribute not in attribute_ids, still include it
+                attributeStocks[variantData.attribute_id] = Number.isFinite(variant.quantity) ? variant.quantity : 0;
+                console.log(`ℹ️ handleEdit: Variant attribute ${variantData.attribute_id} not in product.attribute_ids but will be included with stock ${variant.quantity}`);
+              }
+            } else {
+              console.log('⚠️ handleEdit: Variant missing attribute_id:', variant.variant_data);
+            }
+          }
+        } else {
+          console.log('ℹ️ handleEdit: No variants found or failed to load:', variantsResponse.error);
+        }
+      } catch (error) {
+        console.error('❌ handleEdit: Error loading attribute stocks:', error);
+      }
+    }
+
+    // Compute total from attribute stocks to keep product.stock consistent with variants
+    const computedTotal = sumAttributeStockValues(attributeIds, attributeStocks);
+
+    // Now set the form data in a single update to avoid intermediate inconsistent UI
     setFormData({
       name: product.name,
       description: product.description || '',
       category_id: product.category_id || '',
       subcategory_id: product.subcategory_id || '',
-      attribute_id: product.attribute_id || '',
+      attribute_ids: attributeIds,
+      attribute_stocks: attributeStocks,
       cost: product.cost?.toString() || '',
       price: product.price?.toString() || '',
-      stock: product.stock?.toString() || '0',
+  stock: (attributeIds.length > 0 ? computedTotal.toString() : (product.stock?.toString() || '0')),
       cover_image: product.cover_image || '',
       hover_image: product.hover_image || '',
       gallery_images: product.product_images || [],
@@ -528,7 +742,8 @@ export default function AdminProductsPage() {
       description: '',
       category_id: '',
       subcategory_id: '',
-      attribute_id: '',
+      attribute_ids: [],
+      attribute_stocks: {},
       cost: '',
       price: '',
       stock: '',
@@ -554,10 +769,13 @@ export default function AdminProductsPage() {
     return subcategory ? subcategory.name : 'Subcategoría no encontrada';
   };
 
-  const getAttributeName = (attributeId: string) => {
-    if (!attributeId) return 'Sin atributo';
-    const attribute = productAttributes.find(attr => attr.id === attributeId);
-    return attribute ? `${attribute.name}: ${attribute.value}` : 'Atributo no encontrado';
+  const getAttributeName = (attributeIds: string[]) => {
+    if (!attributeIds || attributeIds.length === 0) return 'Sin atributos';
+    const attributeNames = attributeIds.map(id => {
+      const attribute = productAttributes.find(attr => attr.id === id);
+      return attribute ? `${attribute.name}: ${attribute.value}` : 'Atributo no encontrado';
+    });
+    return attributeNames.join(', ');
   };
 
   // Action functions for new features
@@ -743,26 +961,6 @@ export default function AdminProductsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div>
-                  <Label htmlFor="attribute">Atributo</Label>
-                  <Select 
-                    value={formData.attribute_id} 
-                    onValueChange={(value) => setFormData({ ...formData, attribute_id: value })}
-                    disabled={!formData.subcategory_id}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un atributo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredAttributes.map((attribute) => (
-                        <SelectItem key={attribute.id} value={attribute.id}>
-                          {attribute.name}: {attribute.value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <div>
@@ -821,16 +1019,209 @@ export default function AdminProductsPage() {
                     min="0"
                     step="1"
                     value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    onChange={(e) => {
+                      // Only allow manual input when there are no attributes
+                      if (formData.attribute_ids.length === 0) {
+                        setFormData({ ...formData, stock: e.target.value });
+                      }
+                    }}
                     placeholder="0"
+                    readOnly={formData.attribute_ids.length > 0}
+                    className={formData.attribute_ids.length > 0 ? "bg-gray-50 cursor-not-allowed" : ""}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Cantidad de unidades disponibles en inventario
+                    {formData.attribute_ids.length > 0
+                      ? `Stock total calculado automáticamente (${totalAttributeStock} unidades en total)`
+                      : "Cantidad de unidades disponibles en inventario"
+                    }
                   </p>
                 </div>
               </div>
 
-              {/* Imágenes de Portada */}
+              {/* Gestión de Atributos y Stock por Atributo */}
+              {formData.attribute_ids.length > 0 && (
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold">Stock por Atributo</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Gestiona el stock específico para cada atributo seleccionado
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {formData.attribute_ids.map((attributeId) => {
+                      const attribute = filteredAttributes.find(attr => attr.id === attributeId);
+                      if (!attribute) return null;
+
+                      // Initialize attribute stock if not exists
+                      const currentStock = formData.attribute_stocks?.[attributeId] || 0;
+
+                      return (
+                        <div key={attributeId} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-sm">
+                                {attribute.name}: {attribute.value}
+                              </span>
+                              {attribute.color_hex && (
+                                <span
+                                  className="inline-block w-4 h-4 rounded border border-gray-300"
+                                  style={{ backgroundColor: attribute.color_hex }}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newStock = Math.max(0, currentStock - 1);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    attribute_stocks: {
+                                      ...prev.attribute_stocks,
+                                      [attributeId]: newStock
+                                    }
+                                  }));
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={currentStock}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    attribute_stocks: {
+                                      ...prev.attribute_stocks,
+                                      [attributeId]: value
+                                    }
+                                  }));
+                                }}
+                                className="w-20 text-center"
+                              />
+
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newStock = currentStock + 1;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    attribute_stocks: {
+                                      ...prev.attribute_stocks,
+                                      [attributeId]: newStock
+                                    }
+                                  }));
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <span className="text-sm text-muted-foreground">
+                              unidades disponibles
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Selector de Atributos - Movido abajo */}
+              <div className="space-y-4">
+                <div className="border-b pb-2">
+                  <h3 className="text-lg font-semibold">Seleccionar Atributos</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Elige los atributos disponibles para este producto
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="subcategory">Subcategoría *</Label>
+                  <Select
+                    value={formData.subcategory_id}
+                    onValueChange={(value) => setFormData({ ...formData, subcategory_id: value, attribute_ids: [], attribute_stocks: {} })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una subcategoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredSubcategories.map((subcategory) => (
+                        <SelectItem key={subcategory.id} value={subcategory.id}>
+                          {subcategory.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="attributes">Atributos Disponibles</Label>
+                  <div className="border rounded-md p-3 bg-white">
+                    {filteredAttributes.length === 0 ? (
+                      <p className="text-sm text-gray-500">
+                        {formData.subcategory_id ? 'No hay atributos disponibles para esta subcategoría' : 'Selecciona una subcategoría primero'}
+                      </p>
+                    ) : (
+                      <div className="max-h-60 overflow-y-auto">
+                        <div className="space-y-2">
+                          {filteredAttributes.map((attribute) => (
+                            <div key={attribute.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                              <input
+                                type="checkbox"
+                                id={`attribute-${attribute.id}`}
+                                checked={formData.attribute_ids.includes(attribute.id)}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    attribute_ids: checked
+                                      ? [...prev.attribute_ids, attribute.id]
+                                      : prev.attribute_ids.filter(id => id !== attribute.id)
+                                  }));
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <label
+                                htmlFor={`attribute-${attribute.id}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {attribute.name}: {attribute.value}
+                                {attribute.color_hex && (
+                                  <span
+                                    className="inline-block w-3 h-3 rounded ml-2 border border-gray-300"
+                                    style={{ backgroundColor: attribute.color_hex }}
+                                  />
+                                )}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {formData.attribute_ids.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      {formData.attribute_ids.length} atributo{formData.attribute_ids.length !== 1 ? 's' : ''} seleccionado{formData.attribute_ids.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
               <div className="space-y-4">
                 <div className="border-b pb-2">
                   <h3 className="text-lg font-semibold">Imágenes de Portada</h3>
@@ -1210,7 +1601,7 @@ export default function AdminProductsPage() {
                   </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      {getAttributeName(product.attribute_id || '')}
+                      {getAttributeName(product.attribute_ids || [])}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -1270,8 +1661,18 @@ export default function AdminProductsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setSelectedProductForSale(product);
-                          setIsProductSalesModalOpen(true);
+                          // Check if product has attributes
+                          if (product.attribute_ids && product.attribute_ids.length > 0) {
+                            // Product has attributes - show attribute selection modal
+                            setProductForAttributeSelection(product);
+                            setSelectedAttributeForSale(''); // Reset selected attribute
+                            setIsAttributeSelectionModalOpen(true);
+                          } else {
+                            // Product has no attributes - go directly to sales modal
+                            setSelectedProductForSale(product);
+                            setSelectedAttributeForSale(''); // Reset selected attribute
+                            setIsProductSalesModalOpen(true);
+                          }
                         }}
                         title="Registrar venta"
                         className="text-green-600 hover:text-green-700"
@@ -1339,9 +1740,11 @@ export default function AdminProductsPage() {
         onClose={() => {
           setIsProductSalesModalOpen(false);
           setSelectedProductForSale(null);
+          setSelectedAttributeForSale(''); // Reset selected attribute
         }}
         onSaleRegistered={handleSaleRegistered}
         preselectedProduct={selectedProductForSale}
+        preselectedAttribute={selectedAttributeForSale}
       />
 
       {/* History Modal */}
@@ -1350,6 +1753,104 @@ export default function AdminProductsPage() {
         onClose={() => setIsHistoryModalOpen(false)}
         defaultTab={historyDefaultTab}
       />
+
+      {/* Attribute Selection Modal for Sales */}
+      <Dialog open={isAttributeSelectionModalOpen} onOpenChange={setIsAttributeSelectionModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5" />
+              Seleccionar Atributo para Venta
+            </DialogTitle>
+            <DialogDescription>
+              {productForAttributeSelection && (
+                <>Selecciona el atributo específico del producto <strong>{productForAttributeSelection.name}</strong> que se va a vender.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {productForAttributeSelection && productForAttributeSelection.attribute_ids && productForAttributeSelection.attribute_ids.length > 0 ? (
+              <div className="space-y-2">
+                {productForAttributeSelection.attribute_ids.map((attributeId) => {
+                  const attribute = productAttributes.find(attr => attr.id === attributeId);
+                  if (!attribute) return null;
+
+                  return (
+                    <div
+                      key={attributeId}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedAttributeForSale === attributeId
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setSelectedAttributeForSale(attributeId)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">
+                            {attribute.name}: {attribute.value}
+                          </span>
+                          {attribute.color_hex && (
+                            <span
+                              className="inline-block w-4 h-4 rounded border border-gray-300"
+                              style={{ backgroundColor: attribute.color_hex }}
+                            />
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {/* TODO: Show current stock for this attribute */}
+                          Stock disponible
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No se encontraron atributos para este producto.</p>
+                <p className="text-sm mt-2">Verifica que el producto tenga atributos configurados.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsAttributeSelectionModalOpen(false);
+                setProductForAttributeSelection(null);
+                setSelectedAttributeForSale('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedAttributeForSale && productForAttributeSelection) {
+                  // Close attribute selection modal
+                  setIsAttributeSelectionModalOpen(false);
+
+                  // Open sales modal with selected product and attribute
+                  setSelectedProductForSale(productForAttributeSelection);
+                  setIsProductSalesModalOpen(true);
+
+                  // Reset state
+                  setProductForAttributeSelection(null);
+                  // Keep selectedAttributeForSale for the modal
+                }
+              }}
+              disabled={!selectedAttributeForSale}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Continuar con Venta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

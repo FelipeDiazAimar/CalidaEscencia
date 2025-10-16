@@ -1,16 +1,13 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { api } from "@/lib/api/products";
-import type { OrderWithItems, OrderStatus, Product } from "@/types/database";
+import { api, inventoryApi, productSalesApi } from "@/lib/api/products";
+import { salesApi } from "@/lib/api/finances";
+import type { OrderWithItems, OrderStatus, Product, SaleWithItems, SaleItem, ProductWithDetails } from "@/types/database";
 import { Edit, Trash2, Check, X, Plus, Minus, Package, TrendingDown, TrendingUp, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface ProductWithStock extends Product {
-  stock_quantity: number;
-}
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
@@ -24,9 +21,10 @@ export default function OrdersPage() {
   });
 
   // Analytics state
-  const [lowStockProducts, setLowStockProducts] = useState<ProductWithStock[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<ProductWithDetails[]>([]);
   const [pendingOrders, setPendingOrders] = useState<OrderWithItems[]>([]);
   const [completedOrders, setCompletedOrders] = useState<OrderWithItems[]>([]);
+  const [completedSales, setCompletedSales] = useState<SaleItem[]>([]);
   const [totalUnsatisfiedDemand, setTotalUnsatisfiedDemand] = useState(0);
   const [weeklySales, setWeeklySales] = useState(0);
 
@@ -40,12 +38,20 @@ export default function OrdersPage() {
     }
   }, [orders, products]);
 
+  useEffect(() => {
+    if (completedSales.length > 0) {
+      setWeeklySales(getWeeklySales());
+    }
+  }, [completedSales]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [ordersResponse, productsResponse] = await Promise.all([
+      const [ordersResponse, productsResponse, salesResponse, lowStockResponse] = await Promise.all([
         api.orders.getAll(),
-        api.products.getAll()
+        api.products.getAll(),
+        productSalesApi.getAll(),
+        inventoryApi.getLowStockProducts(10)
       ]);
       
       if (ordersResponse.data) {
@@ -53,6 +59,12 @@ export default function OrdersPage() {
       }
       if (productsResponse.data) {
         setProducts(productsResponse.data);
+      }
+      if (salesResponse.data) {
+        setCompletedSales(salesResponse.data);
+      }
+      if (lowStockResponse.data) {
+        setLowStockProducts(lowStockResponse.data);
       }
 
       // Update analytics after data is loaded
@@ -67,14 +79,6 @@ export default function OrdersPage() {
   };
 
   const updateAnalytics = (ordersData: OrderWithItems[], productsData: Product[]) => {
-    // Calculate analytics with the loaded data
-    const lowStock = productsData.filter(product => {
-      // Mock stock calculation - in real app would join with inventory
-      const mockStock = Math.floor(Math.random() * 20) + 1;
-      return mockStock <= 10 && product.is_active;
-    }).slice(0, 5);
-    setLowStockProducts(lowStock.map(product => ({ ...product, stock_quantity: Math.floor(Math.random() * 10) + 1 })));
-
     const pending = ordersData.filter(order => order.status === 'pending' || order.status === 'confirmed');
     setPendingOrders(pending);
 
@@ -83,13 +87,6 @@ export default function OrdersPage() {
 
     const unsatisfiedDemand = pending.reduce((total, order) => total + order.total_amount, 0);
     setTotalUnsatisfiedDemand(unsatisfiedDemand);
-
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const weeklySalesAmount = completed
-      .filter(order => new Date(order.created_at) >= oneWeekAgo)
-      .reduce((total, order) => total + order.total_amount, 0);
-    setWeeklySales(weeklySalesAmount);
   };
 
   const handleEditOrder = (order: OrderWithItems) => {
@@ -177,11 +174,6 @@ export default function OrdersPage() {
   };
 
   // Real data calculations
-  const getLowStockProducts = () => {
-    // Simulate low stock products - in real app this would check inventory
-    return products.filter(product => product.is_active).slice(0, 3);
-  };
-
   const getPendingOrders = () => {
     return orders.filter(order => order.status === 'pending' || order.status === 'confirmed');
   };
@@ -198,9 +190,9 @@ export default function OrdersPage() {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
-    return getCompletedOrders()
-      .filter(order => new Date(order.created_at) >= oneWeekAgo)
-      .reduce((total, order) => total + order.total_amount, 0);
+    return completedSales
+      .filter(sale => new Date(sale.created_at) >= oneWeekAgo)
+      .reduce((total, sale) => total + parseFloat(String(sale.total_price ?? 0)), 0);
   };
 
   const getRecentActivity = () => {
@@ -258,39 +250,42 @@ export default function OrdersPage() {
             <CardContent className="pt-4">
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {lowStockProducts.length > 0 ? (
-                  lowStockProducts.map((product) => (
-                    <div 
-                      key={product.id}
-                      className={`flex justify-between items-center p-3 rounded-lg border ${
-                        product.stock_quantity <= 5 
-                          ? 'bg-red-50 border-red-200' 
-                          : 'bg-yellow-50 border-yellow-200'
-                      }`}
-                    >
-                      <div>
-                        <p className={`font-medium ${
-                          product.stock_quantity <= 5 ? 'text-red-900' : 'text-yellow-900'
-                        }`}>
-                          {product.name}
-                        </p>
-                        <p className={`text-sm ${
-                          product.stock_quantity <= 5 ? 'text-red-600' : 'text-yellow-600'
-                        }`}>
-                          Stock: {product.stock_quantity} unidades
-                        </p>
-                      </div>
-                      <Badge 
-                        variant="outline" 
-                        className={
-                          product.stock_quantity <= 5 
-                            ? 'text-red-600 border-red-600' 
-                            : 'text-yellow-600 border-yellow-600'
-                        }
+                  lowStockProducts.map((product) => {
+                    const stockQuantity = product.inventory?.quantity || 0;
+                    return (
+                      <div 
+                        key={product.id}
+                        className={`flex justify-between items-center p-3 rounded-lg border ${
+                          stockQuantity <= 5 
+                            ? 'bg-red-50 border-red-200' 
+                            : 'bg-yellow-50 border-yellow-200'
+                        }`}
                       >
-                        {product.stock_quantity <= 5 ? 'Crítico' : 'Bajo'}
-                      </Badge>
-                    </div>
-                  ))
+                        <div>
+                          <p className={`font-medium ${
+                            stockQuantity <= 5 ? 'text-red-900' : 'text-yellow-900'
+                          }`}>
+                            {product.name}
+                          </p>
+                          <p className={`text-sm ${
+                            stockQuantity <= 5 ? 'text-red-600' : 'text-yellow-600'
+                          }`}>
+                            Stock: {stockQuantity} unidades
+                          </p>
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={
+                            stockQuantity <= 5 
+                              ? 'text-red-600 border-red-600' 
+                              : 'text-yellow-600 border-yellow-600'
+                          }
+                        >
+                          {stockQuantity <= 5 ? 'Crítico' : 'Bajo'}
+                        </Badge>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
@@ -371,26 +366,46 @@ export default function OrdersPage() {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="space-y-3 max-h-60 overflow-y-auto">
-                {completedOrders.length > 0 ? (
-                  completedOrders.slice(0, 3).map((order) => (
-                    <div 
-                      key={order.id}
-                      className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200"
-                    >
-                      <div>
-                        <p className="font-medium text-green-900">{order.customer_name}</p>
-                        <p className="text-sm text-green-600">
-                          Vendido hace {Math.floor((new Date().getTime() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24))} días
-                        </p>
+                {completedSales.length > 0 ? (
+                  completedSales.slice(0, 5).map((saleItem) => {
+                    const product = products.find(p => p.id === saleItem.product_id);
+                    return (
+                      <div 
+                        key={saleItem.id}
+                        className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200"
+                      >
+                        <div>
+                          <p className="font-medium text-green-900">
+                            Venta Directa
+                          </p>
+                          <p className="text-sm text-green-600">
+                            {saleItem.quantity}x {product?.name || 'Producto desconocido'}
+                            {saleItem.attribute ? (
+                              <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                {saleItem.attribute.name}: {saleItem.attribute.value}
+                              </span>
+                            ) : (
+                              // Si no hay atributo pero el nombre contiene "|", mostrar la parte después como variante
+                              product?.name?.includes('|') && (
+                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                  {product.name.split('|')[1]?.trim() || 'Variante'}
+                                </span>
+                              )
+                            )}
+                          </p>
+                          <p className="text-xs text-green-500">
+                            {new Date(saleItem.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-900">${parseFloat(String(saleItem.total_price ?? 0)).toFixed(2)}</p>
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            Completado
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-green-900">${order.total_amount.toFixed(2)}</p>
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          Completado
-                        </Badge>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <TrendingUp className="mx-auto h-12 w-12 text-gray-300 mb-4" />
@@ -403,9 +418,6 @@ export default function OrdersPage() {
                   <span className="text-sm font-medium text-green-800">Ventas esta semana:</span>
                   <span className="text-lg font-bold text-green-900">${weeklySales.toFixed(2)}</span>
                 </div>
-                <Link href="/admin/finances" className="text-sm text-green-600 hover:text-green-800 font-medium mt-2 block">
-                  Ver reporte completo →
-                </Link>
               </div>
             </CardContent>
           </Card>
