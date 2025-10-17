@@ -2866,6 +2866,7 @@ ${closureRegistered ? '✅ Registro guardado en base de datos' : '⚠️ Continu
                           <TableHeader>
                             <TableRow>
                               <TableHead>Producto</TableHead>
+                              <TableHead>Atributo</TableHead>
                               <TableHead>Stock Entrante</TableHead>
                               <TableHead>Costo Unit.</TableHead>
                               <TableHead>Precio Unit.</TableHead>
@@ -2877,7 +2878,18 @@ ${closureRegistered ? '✅ Registro guardado en base de datos' : '⚠️ Continu
                           <TableBody>
                             {order.items?.map((item, index) => (
                               <TableRow key={index}>
-                                <TableCell>{item.product_name}</TableCell>
+                                <TableCell>
+                                  <span className="font-medium">{item.product_name}</span>
+                                </TableCell>
+                                <TableCell>
+                                  {item.attribute_name && item.attribute_value ? (
+                                    <span className="text-sm text-muted-foreground">
+                                      {item.attribute_name}: {item.attribute_value}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
                                 <TableCell>+{item.quantity}</TableCell>
                                 <TableCell>${item.unit_cost?.toFixed(2) || '0.00'}</TableCell>
                                 <TableCell>${item.unit_price?.toFixed(2) || '0.00'}</TableCell>

@@ -19,8 +19,9 @@ import {
 } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/products';
+import { productAttributesApi } from '@/lib/api/productAttributes';
 import { stockOrdersApi, StockOrderInsert, StockOrderItemInsert } from '@/lib/api/stockOrders';
-import type { Product, Category } from '@/types/database';
+import type { Product, Category, ProductAttribute } from '@/types/database';
 import { Package, Search, ChevronDown, ChevronRight, Plus, Minus } from 'lucide-react';
 
 interface StockOrderModalProps {
@@ -33,6 +34,9 @@ interface OrderItem {
   product_id: string;
   product_name: string;
   quantity: number;
+  attribute_id?: string;
+  attribute_name?: string;
+  attribute_value?: string;
 }
 
 interface GroupedProducts {
@@ -47,8 +51,10 @@ export default function StockOrderModal({
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
   const [groupedProducts, setGroupedProducts] = useState<GroupedProducts>({});
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [items, setItems] = useState<OrderItem[]>([]);
 
@@ -64,9 +70,10 @@ export default function StockOrderModal({
 
   const loadData = async () => {
     try {
-      const [productsResponse, categoriesResponse] = await Promise.all([
+      const [productsResponse, categoriesResponse, attributesResponse] = await Promise.all([
         api.products.getAll(),
-        api.categories.getAll()
+        api.categories.getAll(),
+        productAttributesApi.getAll()
       ]);
       
       if (productsResponse.success && productsResponse.data) {
@@ -75,6 +82,10 @@ export default function StockOrderModal({
       
       if (categoriesResponse.success && categoriesResponse.data) {
         setCategories(categoriesResponse.data);
+      }
+
+      if (attributesResponse.success && attributesResponse.data) {
+        setAttributes(attributesResponse.data);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -112,31 +123,56 @@ export default function StockOrderModal({
     setExpandedCategories(newExpanded);
   };
 
-  const updateQuantity = (productId: string, productName: string, quantity: number) => {
+  const toggleProduct = (productId: string) => {
+    const newExpanded = new Set(expandedProducts);
+    if (newExpanded.has(productId)) {
+      newExpanded.delete(productId);
+    } else {
+      newExpanded.add(productId);
+    }
+    setExpandedProducts(newExpanded);
+  };
+
+  const updateQuantity = (productId: string, productName: string, quantity: number, attributeId?: string, attributeName?: string, attributeValue?: string) => {
     setItems(prev => {
-      const existing = prev.find(item => item.product_id === productId);
+      const existing = prev.find(item => 
+        item.product_id === productId && 
+        item.attribute_id === attributeId
+      );
       if (existing) {
         if (quantity <= 0) {
           // Remover item si cantidad es 0
-          return prev.filter(item => item.product_id !== productId);
+          return prev.filter(item => 
+            !(item.product_id === productId && item.attribute_id === attributeId)
+          );
         } else {
           // Actualizar cantidad
           return prev.map(item => 
-            item.product_id === productId 
+            (item.product_id === productId && item.attribute_id === attributeId)
               ? { ...item, quantity }
               : item
           );
         }
       } else if (quantity > 0) {
         // Agregar nuevo item
-        return [...prev, { product_id: productId, product_name: productName, quantity }];
+        return [...prev, { 
+          product_id: productId, 
+          product_name: productName, 
+          quantity,
+          attribute_id: attributeId,
+          attribute_name: attributeName,
+          attribute_value: attributeValue
+        }];
       }
       return prev;
     });
   };
 
-  const getProductQuantity = (productId: string) => {
-    const item = items.find(item => item.product_id === productId);
+  const getProductQuantity = (productId: string, attributeId?: string) => {
+    const item = items.find(item => 
+      item.product_id === productId && 
+      item.attribute_id === attributeId
+    );
     return item ? item.quantity : 0;
   };
 
@@ -176,7 +212,10 @@ export default function StockOrderModal({
       const orderItems: Omit<StockOrderItemInsert, 'stock_order_id'>[] = items.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
-        quantity: item.quantity
+        quantity: item.quantity,
+        attribute_id: item.attribute_id || null,
+        attribute_name: item.attribute_name || null,
+        attribute_value: item.attribute_value || null
       }));
 
       // Crear el pedido usando la nueva API
@@ -261,45 +300,140 @@ export default function StockOrderModal({
                   
                   <CollapsibleContent>
                     <div className="space-y-2 p-2">
-                      {categoryProducts.map((product) => (
-                        <div key={product.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                          <div className="flex-1">
-                            <span className="text-sm font-medium">{product.name}</span>
-                            <div className="text-xs text-gray-500">
-                              Stock actual: {product.stock || 0}
+                      {categoryProducts.map((product) => {
+                        const hasAttributes = product.attribute_ids && product.attribute_ids.length > 0;
+                        const productAttributes = attributes.filter(attr => 
+                          product.attribute_ids?.includes(attr.id)
+                        );
+
+                        if (hasAttributes) {
+                          // Producto con atributos - mostrar colapsable
+                          return (
+                            <Collapsible
+                              key={product.id}
+                              open={expandedProducts.has(product.id)}
+                              onOpenChange={() => toggleProduct(product.id)}
+                            >
+                              <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-gray-50 rounded border">
+                                <div className="flex items-center gap-2">
+                                  {expandedProducts.has(product.id) ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                  <div className="text-left">
+                                    <span className="text-sm font-medium">{product.name}</span>
+                                    <div className="text-xs text-gray-500">
+                                      Stock actual: {product.stock || 0} | {productAttributes.length} atributos
+                                    </div>
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              
+                              <CollapsibleContent className="ml-6 mt-2 space-y-2">
+                                {productAttributes.map((attribute) => (
+                                  <div key={attribute.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                    <div className="flex-1">
+                                      <span className="text-sm">{attribute.name}: {attribute.value}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => updateQuantity(
+                                          product.id, 
+                                          product.name, 
+                                          getProductQuantity(product.id, attribute.id) - 1,
+                                          attribute.id,
+                                          attribute.name,
+                                          attribute.value
+                                        )}
+                                        disabled={getProductQuantity(product.id, attribute.id) === 0}
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={getProductQuantity(product.id, attribute.id)}
+                                        onChange={(e) => updateQuantity(
+                                          product.id, 
+                                          product.name, 
+                                          parseInt(e.target.value) || 0,
+                                          attribute.id,
+                                          attribute.name,
+                                          attribute.value
+                                        )}
+                                        className="w-16 h-8 text-center"
+                                      />
+                                      
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => updateQuantity(
+                                          product.id, 
+                                          product.name, 
+                                          getProductQuantity(product.id, attribute.id) + 1,
+                                          attribute.id,
+                                          attribute.name,
+                                          attribute.value
+                                        )}
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          );
+                        } else {
+                          // Producto sin atributos - comportamiento original
+                          return (
+                            <div key={product.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                              <div className="flex-1">
+                                <span className="text-sm font-medium">{product.name}</span>
+                                <div className="text-xs text-gray-500">
+                                  Stock actual: {product.stock || 0}
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateQuantity(product.id, product.name, getProductQuantity(product.id) - 1)}
+                                  disabled={getProductQuantity(product.id) === 0}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={getProductQuantity(product.id)}
+                                  onChange={(e) => updateQuantity(product.id, product.name, parseInt(e.target.value) || 0)}
+                                  className="w-16 h-8 text-center"
+                                />
+                                
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateQuantity(product.id, product.name, getProductQuantity(product.id) + 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuantity(product.id, product.name, getProductQuantity(product.id) - 1)}
-                              disabled={getProductQuantity(product.id) === 0}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            
-                            <Input
-                              type="number"
-                              min="0"
-                              value={getProductQuantity(product.id)}
-                              onChange={(e) => updateQuantity(product.id, product.name, parseInt(e.target.value) || 0)}
-                              className="w-16 h-8 text-center"
-                            />
-                            
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuantity(product.id, product.name, getProductQuantity(product.id) + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        }
+                      })}
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
@@ -321,8 +455,15 @@ export default function StockOrderModal({
               <div className="border rounded-lg p-4 bg-blue-50">
                 <div className="space-y-2">
                   {items.map((item) => (
-                    <div key={item.product_id} className="flex justify-between items-center">
-                      <span className="text-sm">{item.product_name}</span>
+                    <div key={`${item.product_id}-${item.attribute_id || 'no-attribute'}`} className="flex justify-between items-center">
+                      <span className="text-sm">
+                        {item.product_name}
+                        {item.attribute_name && item.attribute_value && (
+                          <span className="text-gray-600 ml-2">
+                            ({item.attribute_name}: {item.attribute_value})
+                          </span>
+                        )}
+                      </span>
                       <span className="text-sm font-medium">Cantidad: {item.quantity}</span>
                     </div>
                   ))}

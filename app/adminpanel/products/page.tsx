@@ -329,6 +329,49 @@ export default function AdminProductsPage() {
     return subcategories.filter(sub => sub.category_id === selectedCategory);
   };
 
+  // Calculate total stock for products with attributes
+  const calculateProductsStock = async (products: Product[]): Promise<Product[]> => {
+    const updatedProducts = await Promise.all(
+      products.map(async (product) => {
+        const attributeIds = product.attribute_ids || [];
+        
+        if (attributeIds.length === 0) {
+          // Product without attributes - keep original stock
+          return product;
+        }
+
+        try {
+          // Load variant inventory for this product
+          const variantsResponse = await productVariantInventoryApi.getByProduct(product.id);
+          
+          if (variantsResponse.success && variantsResponse.data) {
+            // Calculate total stock from all variants
+            const totalStock = variantsResponse.data.reduce((total, variant) => {
+              const variantData = variant.variant_data as any;
+              if (variantData?.attribute_id && attributeIds.includes(variantData.attribute_id)) {
+                return total + (Number.isFinite(variant.quantity) ? variant.quantity : 0);
+              }
+              return total;
+            }, 0);
+
+            // Return product with calculated stock
+            return {
+              ...product,
+              stock: totalStock
+            };
+          }
+        } catch (error) {
+          console.error(`Error calculating stock for product ${product.id}:`, error);
+        }
+
+        // If calculation fails, keep original stock
+        return product;
+      })
+    );
+
+    return updatedProducts;
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -344,7 +387,11 @@ export default function AdminProductsPage() {
         productAttributesApi.getAll()
       ]);
 
-      if (productsRes.success) setProducts(productsRes.data || []);
+      if (productsRes.success) {
+        // Calculate total stock for products with attributes
+        const productsWithCalculatedStock = await calculateProductsStock(productsRes.data || []);
+        setProducts(productsWithCalculatedStock);
+      }
       if (categoriesRes.success) setCategories(categoriesRes.data || []);
       if (subcategoriesRes.success) setSubcategories(subcategoriesRes.data || []);
       if (attributesRes.success) setProductAttributes(attributesRes.data || []);

@@ -13,6 +13,9 @@ export interface StockOrderItem {
   total_cost?: number;
   unit_price?: number;
   total_potential_income?: number;
+  attribute_id?: string | null;
+  attribute_name?: string | null;
+  attribute_value?: string | null;
 }
 
 export interface StockOrder {
@@ -54,6 +57,9 @@ export interface StockOrderItemInsert {
   total_cost?: number;
   unit_price?: number;
   total_potential_income?: number;
+  attribute_id?: string | null;
+  attribute_name?: string | null;
+  attribute_value?: string | null;
 }
 
 // API para manejar pedidos de stock
@@ -74,6 +80,9 @@ export const stockOrdersApi = {
             total_cost,
             unit_price,
             total_potential_income,
+            attribute_id,
+            attribute_name,
+            attribute_value,
             created_at
           )
         `)
@@ -189,9 +198,95 @@ export const stockOrdersApi = {
   // Actualizar estado de un pedido
   updateStatus: async (orderId: string, status: StockOrder['status']): Promise<{ success: boolean; error?: string }> => {
     try {
+      // If marking as received, update inventory first
+      if (status === 'received') {
+        // Get the order items to update inventory
+        const { data: orderData, error: fetchError } = await supabase!
+          .from('stock_orders' as any)
+          .select(`
+            id,
+            stock_order_items (
+              product_id,
+              quantity,
+              attribute_id,
+              attribute_name,
+              attribute_value
+            )
+          `)
+          .eq('id', orderId)
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching order items for inventory update:', fetchError);
+          return { success: false, error: `Error al obtener items del pedido: ${fetchError.message}` };
+        }
+
+        if (orderData?.stock_order_items) {
+          // Update inventory for each item
+          for (const item of orderData.stock_order_items) {
+            if (item.attribute_id) {
+              // Item has attributes - update product_variant_inventory
+              const variantData = {
+                attribute_id: item.attribute_id,
+                attribute_name: item.attribute_name,
+                attribute_value: item.attribute_value
+              };
+
+              // Check if variant exists
+              const { data: existingVariant, error: checkError } = await supabase!
+                .from('product_variant_inventory')
+                .select('id, quantity')
+                .eq('product_id', item.product_id)
+                .eq('variant_data->>attribute_id', item.attribute_id)
+                .single();
+
+              if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = not found
+                console.error('Error checking existing variant:', checkError);
+                continue;
+              }
+
+              if (existingVariant) {
+                // Update existing variant quantity
+                const { error: updateError } = await supabase!
+                  .from('product_variant_inventory')
+                  .update({
+                    quantity: existingVariant.quantity + item.quantity,
+                    last_updated: new Date().toISOString()
+                  })
+                  .eq('id', existingVariant.id);
+
+                if (updateError) {
+                  console.error('Error updating variant inventory:', updateError);
+                }
+              } else {
+                // Create new variant
+                const { error: insertError } = await supabase!
+                  .from('product_variant_inventory')
+                  .insert({
+                    product_id: item.product_id,
+                    variant_data: variantData,
+                    quantity: item.quantity,
+                    reserved_quantity: 0,
+                    is_active: true
+                  });
+
+                if (insertError) {
+                  console.error('Error creating variant inventory:', insertError);
+                }
+              }
+            } else {
+              // Item without attributes - this shouldn't happen in current system
+              // but keeping for backwards compatibility
+              console.warn('Stock order item without attribute_id found - skipping inventory update');
+            }
+          }
+        }
+      }
+
+      // Update the order status
       const { error } = await supabase!
         .from('stock_orders' as any)
-        .update({ 
+        .update({
           status,
           updated_at: new Date().toISOString()
         } as any)
