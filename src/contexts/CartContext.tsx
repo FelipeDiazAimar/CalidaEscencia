@@ -6,8 +6,8 @@ import type { CartItem } from '@/types/database';
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'id'>) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (itemId: string) => void;
+  updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
   total: number;
   itemCount: number;
@@ -64,21 +64,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const removeItem = (productId: string) => {
+  const removeItem = (itemId: string) => {
     setItems(currentItems => 
-      currentItems.filter(item => item.product_id !== productId)
+      currentItems.filter(item => item.id !== itemId)
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (itemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(itemId);
       return;
     }
 
     setItems(currentItems =>
       currentItems.map(item =>
-        item.product_id === productId
+        item.id === itemId
           ? { ...item, quantity }
           : item
       )

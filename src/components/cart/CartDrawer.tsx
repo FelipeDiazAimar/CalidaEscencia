@@ -400,7 +400,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                         console.log('Item subcategory:', item.subcategory);
                         
                         return (
-                          <div key={item.product_id} className="flex items-center space-x-4 py-4 border-b">
+                          <div key={item.id} className="flex items-center space-x-4 py-4 border-b">
                             {item.image && (
                               <img
                                 src={item.image}
@@ -424,7 +424,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
 
                             <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+                                onClick={() => updateQuantity(item.id!, item.quantity - 1)}
                                 className="p-1 rounded-md hover:bg-gray-100"
                               >
                                 <Minus className="h-4 w-4" />
@@ -433,7 +433,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                               <span className="w-8 text-center text-sm">{item.quantity}</span>
 
                               <button
-                                onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.id!, item.quantity + 1)}
                                 className="p-1 rounded-md hover:bg-gray-100"
                               >
                                 <Plus className="h-4 w-4" />
@@ -441,7 +441,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                             </div>
 
                             <button
-                              onClick={() => removeItem(item.product_id)}
+                              onClick={() => removeItem(item.id!)}
                               className="p-1 rounded-md hover:bg-gray-100 text-red-500"
                             >
                               <X className="h-4 w-4" />
