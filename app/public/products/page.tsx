@@ -334,7 +334,7 @@ function ProductsContent() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 md:gap-6 bg-background mb-8">
               {paginatedProducts.map((product, index) => {
-                const slug = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                const slug = `${(product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}--${product.id}`;
                 const categoryName = getCategoryName(product.category_id);
                 const subcategoryName = getSubcategoryName(product.subcategory_id);
                 // Calculate padding based on position in grid for mobile

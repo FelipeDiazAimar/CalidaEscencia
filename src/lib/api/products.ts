@@ -767,8 +767,33 @@ export const productsApi = {
         return createResponse(null, null);
       }
 
+      // Check if slug contains ID (format: name--id)
+      const idMatch = slug.match(/--([a-f0-9-]+)$/);
+      if (idMatch) {
+        // Extract ID from slug and search by ID directly
+        const productId = idMatch[1];
+
+        const { data, error } = await supabase!
+          .from('products')
+          .select(`
+            *,
+            categories(name),
+            subcategories(id, name)
+          `)
+          .eq('id', productId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+          return createResponse(data, null);
+        }
+      }
+
+      // Fallback: Try legacy slug format (without ID) for backwards compatibility
       // Convert slug back to name format (replace dashes with spaces and title case)
-      const searchTerms = slug.split('-').map(word => 
+      const searchTerms = slug.split('-').map(word =>
         word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
       );
 
@@ -833,7 +858,7 @@ export const productsApi = {
 
       // If no product found
       return createResponse(null, null);
-      
+
     } catch (error) {
       return createResponse(null, handleError(error));
     }
@@ -3190,10 +3215,13 @@ const aboutContentApi = {
         .select('*')
         .eq('section_type', sectionType)
         .eq('is_active', true)
-        .single();
+        .order('display_order', { ascending: true })
+        .limit(1);
 
       if (error) throw error;
-      return createResponse(data, null);
+
+      // Return the first active section of this type, or null if none exists
+      return createResponse(data && data.length > 0 ? data[0] : null, null);
     } catch (error) {
       return createResponse(null, handleError(error));
     }

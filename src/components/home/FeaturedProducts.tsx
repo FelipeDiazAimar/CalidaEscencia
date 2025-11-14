@@ -38,11 +38,11 @@ setLoading(false);
 }
 };
 
-const generateSlug = (name: string) => {
-return name
+const generateSlug = (name: string, id: string) => {
+return `${name
 .toLowerCase()
 .replace(/[^a-z0-9]+/g, "-")
-.replace(/(^-|-$)/g, "");
+.replace(/(^-|-$)/g, "")}--${id}`;
 };
 
 const formatPrice = (price: number) => {
@@ -105,7 +105,7 @@ className="w-full"
 >
 <CarouselContent className="-ml-1 md:-ml-4">
 {featuredProducts.map((product) => {
-const slug = generateSlug(product.name);
+const slug = generateSlug(product.name, product.id);
 
 return (
 <CarouselItem key={product.id} className="pl-1 md:pl-4 basis-1/2 md:basis-1/4">

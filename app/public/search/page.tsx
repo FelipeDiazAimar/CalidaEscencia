@@ -66,8 +66,8 @@ function SearchPageContent() {
     }).format(price);
   };
 
-  const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  const generateSlug = (name: string, id: string) => {
+    return `${name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')}--${id}`;
   };
 
   const getImageUrl = (imageUrl: string | null) => {
@@ -254,7 +254,7 @@ function SearchPageContent() {
             {/* Enhanced Results Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {products.map((product) => {
-                const slug = generateSlug(product.name);
+                const slug = generateSlug(product.name, product.id);
                 
                 return (
                   <Link key={product.id} href={`/public/products/${slug}`} className="block">

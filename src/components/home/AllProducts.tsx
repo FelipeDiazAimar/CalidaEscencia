@@ -116,8 +116,8 @@ export default function AllProducts() {
 
   const paginationItems = generatePaginationItems();
 
-  const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  const generateSlug = (name: string, id: string) => {
+    return `${name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')}--${id}`;
   };
 
   const getImageUrl = (imageUrl: string | null) => {
@@ -211,7 +211,7 @@ export default function AllProducts() {
       <div className="px-0 md:container md:mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 md:gap-6">
           {paginatedProducts.map((product, index) => {
-            const slug = generateSlug(product.name);
+            const slug = generateSlug(product.name, product.id);
             
             // Calculate padding based on position in grid for mobile
             const isLeftColumn = index % 2 === 0; // For mobile 2-column layout
