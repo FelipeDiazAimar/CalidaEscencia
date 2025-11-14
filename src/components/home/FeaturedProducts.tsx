@@ -120,7 +120,7 @@ src={product.cover_image}
 alt={product.name}
 width={900}
 height={1600}
-className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+className={`w-full h-full object-cover transition-opacity duration-300 ${product.hover_image ? 'group-hover:opacity-0' : 'group-hover:opacity-100'}`}
 priority={false}
 />
 {product.hover_image && (
@@ -131,6 +131,10 @@ width={900}
 height={1600}
 className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
 priority={false}
+onError={(e) => {
+console.warn(`Failed to load hover image for product ${product.id}:`, product.hover_image);
+e.currentTarget.style.display = 'none';
+}}
 />
 )}
 </>

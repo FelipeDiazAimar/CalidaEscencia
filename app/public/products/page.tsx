@@ -353,17 +353,21 @@ function ProductsContent() {
                                 alt={product.name || 'Producto'}
                                 width={900}
                                 height={1600}
-                                className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                                className={`w-full h-full object-cover transition-opacity duration-300 ${product.hover_image ? 'group-hover:opacity-0' : 'group-hover:opacity-100'}`}
                                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                               />
-                              {product.product_images && product.product_images.length > 1 && (
+                              {product.hover_image && (
                                 <Image
-                                  src={product.product_images[1]}
+                                  src={product.hover_image}
                                   alt={`${product.name} - vista alternativa`}
                                   width={900}
                                   height={1600}
                                   className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                                   sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                                  onError={(e) => {
+                                    console.warn(`Failed to load hover image for product ${product.id}:`, product.hover_image);
+                                    e.currentTarget.style.display = 'none';
+                                  }}
                                 />
                               )}
                             </>

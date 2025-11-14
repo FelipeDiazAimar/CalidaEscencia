@@ -266,7 +266,7 @@ function SearchPageContent() {
                             alt={product.name}
                             width={400}
                             height={600}
-                            className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                            className={`w-full h-full object-cover transition-opacity duration-300 ${product.hover_image ? 'group-hover:opacity-0' : 'group-hover:opacity-100'}`}
                           />
                           {product.hover_image && (
                             <Image
@@ -275,6 +275,10 @@ function SearchPageContent() {
                               width={400}
                               height={600}
                               className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                              onError={(e) => {
+                                console.warn(`Failed to load hover image for product ${product.id}:`, product.hover_image);
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           )}
                           

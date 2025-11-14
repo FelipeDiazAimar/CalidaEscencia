@@ -228,15 +228,21 @@ export default function AllProducts() {
                         alt={product.name}
                         width={900}
                         height={1600}
-                        className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                        className={`w-full h-full object-cover transition-opacity duration-300 ${product.hover_image ? 'group-hover:opacity-0' : 'group-hover:opacity-100'}`}
                       />
-                      <Image
-                        src={getImageUrl(product.hover_image || product.cover_image)}
-                        alt={`${product.name} (hover)`}
-                        width={900}
-                        height={1600}
-                        className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                      />
+                      {product.hover_image && (
+                        <Image
+                          src={getImageUrl(product.hover_image)}
+                          alt={`${product.name} (hover)`}
+                          width={900}
+                          height={1600}
+                          className="w-full h-full object-cover absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                          onError={(e) => {
+                            console.warn(`Failed to load hover image for product ${product.id}:`, product.hover_image);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      )}
                     </div>
                   </CardContent>
                   <div className="py-3 sm:py-4 px-1.5 sm:px-2 bg-background">
